@@ -48,10 +48,22 @@ const isReadablePemPath = (inputPath) => {
     return files.length > 0;
 };
 
+/**
+ * Check whether a config value is a non-empty string.
+ *
+ * @param {unknown} value - Candidate value.
+ * @returns {boolean} True for non-empty strings.
+ */
 const hasText = (value) => {
     return typeof value === "string" && value.trim().length > 0;
 };
 
+/**
+ * Detect local test-network path assumptions in credential fields.
+ *
+ * @param {string} value - Path value.
+ * @returns {boolean} True when path points to test-network artifacts.
+ */
 const hasLocalTestNetworkPath = (value) => {
     if (!hasText(value)) {
         return false;
@@ -61,6 +73,12 @@ const hasLocalTestNetworkPath = (value) => {
     return normalized.includes("test-network/organizations");
 };
 
+/**
+ * Detect local docker host alias assumptions in endpoint values.
+ *
+ * @param {string} value - Peer endpoint value.
+ * @returns {boolean} True when endpoint relies on host.docker.internal.
+ */
 const usesHostDockerInternal = (value) => {
     if (!hasText(value)) {
         return false;
@@ -69,6 +87,14 @@ const usesHostDockerInternal = (value) => {
     return value.includes("host.docker.internal");
 };
 
+/**
+ * Validate Fabric runtime config completeness and profile-specific constraints.
+ *
+ * In strict mode this throws to fail fast at startup.
+ * In non-strict mode this logs and allows graceful fallback.
+ *
+ * @returns {boolean} True when Fabric runtime config is acceptable.
+ */
 const validateFabricRuntimeConfig = () => {
     const missingFields = [];
     const missingPaths = [];

@@ -8,6 +8,10 @@ import {
     listBatchSnapshots,
     queryBatchTimelineEvents,
 } from "./supply-chain.geo.js";
+import {
+    emitCanonicalAlert,
+    emitDecisionAlert,
+} from "../alerts/alert-taxonomy.mapper.js";
 
 /**
  * Convert number-like input to a fixed-width hexadecimal string.
@@ -262,6 +266,18 @@ export class SupplyChainService {
             code: accepted ? "SCAN_ACCEPTED" : "SCAN_REJECTED",
         };
 
+        const decisionAlert = emitDecisionAlert(decision.code, {
+            batchID: batch.batchID,
+            traceId,
+            details: {
+                ledgerMatch: protectedQrCheck.matched,
+                isAuthentic: verifyResult.isAuthentic,
+                confidenceScore: verifyResult.confidenceScore,
+                aiAccepted: aiVerification.accepted,
+                safetyLevel: result.safetyStatus.level,
+            },
+        });
+
         if (!accepted) {
             throw new HttpException(
                 400,
@@ -269,6 +285,7 @@ export class SupplyChainService {
                 "Product verification failed",
                 {
                     decision,
+                    alert: decisionAlert,
                     confidenceScore: verifyResult.confidenceScore,
                     ledgerMatch: protectedQrCheck.matched,
                     safetyStatus: result.safetyStatus,
@@ -279,6 +296,7 @@ export class SupplyChainService {
 
         return {
             decision,
+            alert: decisionAlert,
             isAuthentic: verifyResult.isAuthentic,
             confidenceScore: verifyResult.confidenceScore,
             tokenDigest,
@@ -320,7 +338,23 @@ export class SupplyChainService {
      * Recall a batch immediately.
      */
     async emergencyRecall(batchID, actor) {
-        return this.ledgerRepository.emergencyRecall(actor, batchID);
+        const batch = await this.ledgerRepository.emergencyRecall(actor, batchID);
+
+        const recallAlert = emitCanonicalAlert("RECALL_ALERT", {
+            sourceKey: "EmergencyRecall",
+            batchID,
+            traceId: actor?.traceId ?? "",
+            details: {
+                requestedByRole: actor?.role ?? "",
+                requestedByMsp: actor?.mspId ?? "",
+                status: batch?.status ?? "",
+            },
+        });
+
+        return {
+            ...batch,
+            recallAlert,
+        };
     }
 
     /**

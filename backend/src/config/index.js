@@ -81,6 +81,13 @@ const asPositiveInt = (value, fallback) => {
     return parsed;
 };
 
+/**
+ * Normalize an optional string value and return fallback when empty.
+ *
+ * @param {unknown} value - Raw environment value.
+ * @param {string} fallback - Fallback text when value is blank.
+ * @returns {string} Trimmed non-empty string.
+ */
 const asNonEmptyString = (value, fallback = "") => {
     if (typeof value !== "string") {
         return fallback;
@@ -90,6 +97,12 @@ const asNonEmptyString = (value, fallback = "") => {
     return normalized.length > 0 ? normalized : fallback;
 };
 
+/**
+ * Resolve profile file path from cwd when relative path is provided.
+ *
+ * @param {string} inputPath - Relative or absolute path.
+ * @returns {string} Absolute path.
+ */
 const resolveFilePath = (inputPath) => {
     if (!inputPath) {
         return "";
@@ -100,8 +113,15 @@ const resolveFilePath = (inputPath) => {
         : path.resolve(process.cwd(), inputPath);
 };
 
+/** Supported Fabric profile identifiers. */
 const FABRIC_PROFILES = ["local", "staging", "prod"];
 
+/**
+ * Parse and validate Fabric profile value.
+ *
+ * @param {string} value - Raw profile value from env or file.
+ * @returns {"local" | "staging" | "prod"} Valid profile identifier.
+ */
 const normalizeFabricProfile = (value) => {
     const normalized = asNonEmptyString(value, "local").toLowerCase();
 
@@ -123,6 +143,11 @@ const aiVerificationEnabled = asBoolean(
 const fabricProfile = normalizeFabricProfile(process.env.FABRIC_PROFILE ?? "local");
 const fabricProfileFile = asNonEmptyString(process.env.FABRIC_PROFILE_FILE, "");
 
+/**
+ * Load optional Fabric profile JSON and enforce profile consistency.
+ *
+ * @returns {Record<string, unknown>} Parsed profile object.
+ */
 const loadFabricProfileConfig = () => {
     if (!fabricEnabled || !fabricProfileFile) {
         return {};
@@ -166,6 +191,14 @@ const loadFabricProfileConfig = () => {
 
 const fabricProfileConfig = loadFabricProfileConfig();
 
+/**
+ * Resolve one Fabric field by precedence: env > profile file > fallback.
+ *
+ * @param {string} envKey - Environment key.
+ * @param {unknown} profileValue - Value from profile JSON.
+ * @param {string} fallback - Final fallback.
+ * @returns {string} Resolved text value.
+ */
 const fromEnvOrProfile = (envKey, profileValue, fallback = "") => {
     const envValue = asNonEmptyString(process.env[envKey], "");
     if (envValue) {
@@ -180,6 +213,14 @@ const fromEnvOrProfile = (envKey, profileValue, fallback = "") => {
     return fallback;
 };
 
+/**
+ * Build one role-specific Fabric organization configuration.
+ *
+ * @param {string} prefix - Role prefix (`MANUFACTURER|DISTRIBUTOR|REGULATOR`).
+ * @param {string} defaultMspId - Default MSP fallback.
+ * @param {Record<string, string>} profileOrg - Profile JSON role override.
+ * @returns {{ mspId: string, peerEndpoint: string, peerHostAlias: string, tlsCertPath: string, certPath: string, keyPath: string }}
+ */
 const buildFabricOrg = (prefix, defaultMspId, profileOrg = {}) => {
     const envPrefix = `FABRIC_${prefix}`;
     return {

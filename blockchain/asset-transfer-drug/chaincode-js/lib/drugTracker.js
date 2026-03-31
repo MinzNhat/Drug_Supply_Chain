@@ -773,6 +773,17 @@ class DrugTrackerContract extends Contract {
         }
 
         await this._putBatch(ctx, batchID, batch);
+        await ctx.stub.setEvent(
+            "RecallAlert",
+            Buffer.from(
+                JSON.stringify({
+                    batch_id: batchID,
+                    status: batch.status,
+                    recalled_by: this._toCanonicalMSP(clientOrgID),
+                    recalled_at: this._getTimestampISO(ctx),
+                }),
+            ),
+        );
         return JSON.stringify(batch);
     }
 }

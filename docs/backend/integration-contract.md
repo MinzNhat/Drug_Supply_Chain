@@ -46,6 +46,30 @@ Decision rules in Backend:
 - `SCAN_ACCEPTED`: QR physical check authentic, digest matched, ledger safety not `DANGER`, and AI lane (if enabled and provided) accepted.
 - `SCAN_REJECTED`: otherwise, with normalized error payload.
 
+## Unified Alert Taxonomy
+
+Canonical codebook used by Backend, chaincode-event mapping, and outbound sink IDs:
+
+| Canonical Key | Backend Decision | Chaincode Event | Sink Event ID |
+| --- | --- | --- | --- |
+| `SCAN_ACCEPTED` | `SCAN_ACCEPTED` | n/a | `DATN_SCAN_ACCEPTED` |
+| `SCAN_REJECTED` | `SCAN_REJECTED` | n/a | `DATN_SCAN_REJECTED` |
+| `RECALL_ALERT` | `EmergencyRecall` action | `RecallAlert` | `DATN_RECALL_ALERT` |
+| `LEDGER_SCAN_WARNING` | n/a | `GovMonitor` | `DATN_LEDGER_SCAN_WARNING` |
+| `LEDGER_SCAN_SUSPICIOUS` | n/a | `PublicAlert` | `DATN_LEDGER_SCAN_SUSPICIOUS` |
+| `PROTECTED_QR_BOUND` | n/a | `ProtectedQRBound` | `DATN_PROTECTED_QR_BOUND` |
+| `PROTECTED_QR_VERIFICATION_RECORDED` | n/a | `ProtectedQRVerificationRecorded` | `DATN_PROTECTED_QR_VERIFICATION_RECORDED` |
+
+Backend mapper module:
+
+- `backend/src/services/alerts/alert-taxonomy.mapper.js`
+
+Notes:
+
+- `POST /api/v1/verify` emits standardized taxonomy payload from decision code.
+- `POST /api/v1/batches/:batchId/recall` emits standardized `RECALL_ALERT` payload.
+- External sink delivery adapter is tracked separately (P0-05), while canonical IDs are already stable.
+
 ## Error Contract
 
 All API errors use:
