@@ -23,6 +23,9 @@ This document maps Backend API endpoints to Hyperledger Fabric chaincode functio
 | `POST /api/v1/batches/:batchId/events`            | Off-chain `BatchGeoEvent` write | Query    | Ingest lat/lng events for timeline and heatmap.                |
 | `GET /api/v1/batches/:batchId/events`             | Off-chain `BatchGeoEvent` read  | Query    | Batch timeline for FE traceability view.                       |
 | `GET /api/v1/analytics/heatmap`                   | Off-chain geo bucket aggregate  | Query    | Heatmap data for FE map layer.                                 |
+| `GET /api/v1/regulator/alerts`                    | Off-chain `AlertArchive` read   | Query    | Regulator-only paginated alert retrieval.                      |
+| `GET /api/v1/regulator/alerts/:alertId`           | Off-chain `AlertArchive` read   | Query    | Regulator-only alert detail by id.                             |
+| `GET /api/v1/regulator/reports/export`            | Off-chain `AlertArchive` export | Query    | Regulator-only JSON/CSV export with sink publish metadata.     |
 
 ## Public Scan Decision Contract
 
@@ -68,7 +71,9 @@ Notes:
 
 - `POST /api/v1/verify` emits standardized taxonomy payload from decision code.
 - `POST /api/v1/batches/:batchId/recall` emits standardized `RECALL_ALERT` payload.
-- External sink delivery adapter is tracked separately (P0-05), while canonical IDs are already stable.
+- Emitted verify/recall alerts are archived in `AlertArchive` for regulator retrieval/export APIs.
+- Baseline report sink adapter is now wired for regulator export (`logger` channel).
+- Pluggable external sink and delivery reliability policy remains in P0-05 scope.
 
 ## Error Contract
 

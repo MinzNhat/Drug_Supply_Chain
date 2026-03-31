@@ -129,3 +129,87 @@ Response shape:
 - `POST /batches/:batchId/receive`
 - `POST /batches/:batchId/documents`
 - `POST /batches/:batchId/recall`
+
+## 6) Regulator Alert APIs
+
+Base path:
+
+`/api/v1/regulator`
+
+All endpoints below require:
+
+- Bearer token.
+- Role must be `Regulator`.
+
+### 6.1) List Archived Alerts
+
+Endpoint:
+
+`GET /regulator/alerts`
+
+Query params:
+
+- `page` (default 1)
+- `pageSize` (default 20, max 200)
+- `canonicalKey` (for example `SCAN_REJECTED`, `RECALL_ALERT`)
+- `severity` (`info|warn|critical`)
+- `batchID`
+- `sourceType` (`backend_decision|chaincode_event|backend_action`)
+- `sourceKey`
+- `traceId`
+- `from` / `to` (ISO datetime)
+
+Response shape:
+
+```json
+{
+  "success": true,
+  "data": {
+    "page": 1,
+    "pageSize": 20,
+    "total": 2,
+    "items": [
+      {
+        "id": "67ea95fca7e6d9d5f2ecdcad",
+        "canonicalKey": "SCAN_REJECTED",
+        "sinkEventId": "DATN_SCAN_REJECTED",
+        "severity": "warn",
+        "source": {
+          "type": "backend_decision",
+          "key": "SCAN_REJECTED"
+        },
+        "batchID": "BATCH_001",
+        "traceId": "trace-1",
+        "occurredAt": "2026-03-31T12:00:00.000Z",
+        "details": {}
+      }
+    ]
+  }
+}
+```
+
+### 6.2) Read One Alert
+
+Endpoint:
+
+`GET /regulator/alerts/:alertId`
+
+Returns one archived alert by id.
+
+### 6.3) Export Alert Report
+
+Endpoint:
+
+`GET /regulator/reports/export`
+
+Query params:
+
+- `format` (`json|csv`, default `json`)
+- `limit` (default 1000, max 10000)
+- Same filter params as alert list endpoint.
+
+Behavior:
+
+- `format=json`: returns `{ success: true, data: ... }` payload with summary + items.
+- `format=csv`: returns `text/csv` attachment.
+- Export metadata is published through baseline sink adapter (`logger` channel).

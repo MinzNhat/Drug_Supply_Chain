@@ -85,11 +85,31 @@ export class SupplyChainService {
      * @param {import("../../repositories/ledger/ledger.repository.js").LedgerRepository} ledgerRepository
      * @param {import("../qr/qr.service.js").QrService} qrService
      * @param {import("../ai-verifier/ai-verifier.service.js").AiVerifierService | null} aiVerifierService
+     * @param {{ save?: (payload: Record<string, unknown> | null) => Promise<Record<string, unknown> | null> } | null} alertArchiveRepository
      */
-    constructor(ledgerRepository, qrService, aiVerifierService = null) {
+    constructor(
+        ledgerRepository,
+        qrService,
+        aiVerifierService = null,
+        alertArchiveRepository = null,
+    ) {
         this.ledgerRepository = ledgerRepository;
         this.qrService = qrService;
         this.aiVerifierService = aiVerifierService;
+        this.alertArchiveRepository = alertArchiveRepository;
+    }
+
+    /**
+     * Persist emitted alert payload into archive storage when repository is available.
+     *
+     * @param {Record<string, unknown> | null} alertPayload - Emitted alert payload.
+     */
+    async archiveAlert(alertPayload) {
+        if (!this.alertArchiveRepository?.save) {
+            return;
+        }
+
+        await this.alertArchiveRepository.save(alertPayload);
     }
 
     /**
@@ -277,6 +297,7 @@ export class SupplyChainService {
                 safetyLevel: result.safetyStatus.level,
             },
         });
+        await this.archiveAlert(decisionAlert);
 
         if (!accepted) {
             throw new HttpException(
@@ -350,6 +371,7 @@ export class SupplyChainService {
                 status: batch?.status ?? "",
             },
         });
+        await this.archiveAlert(recallAlert);
 
         return {
             ...batch,

@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import { createProductController } from "../../controllers/product/product.controller.js";
 import { authMiddleware } from "../../middleware/auth/auth.middleware.js";
+import { createAlertArchiveRepository } from "../../repositories/alert/alert-archive.repository.js";
 import { createLedgerRepository } from "../../repositories/ledger/create-ledger-repository.js";
 import { AiVerifierService } from "../../services/ai-verifier/ai-verifier.service.js";
 import { QrService } from "../../services/qr/qr.service.js";
@@ -19,12 +20,14 @@ export const createProductRoutes = () => {
 
     // Wire service dependencies once per router instance.
     const ledgerRepository = createLedgerRepository();
+    const alertArchiveRepository = createAlertArchiveRepository();
     const qrService = new QrService();
     const aiVerifierService = new AiVerifierService();
     const supplyChainService = new SupplyChainService(
         ledgerRepository,
         qrService,
         aiVerifierService,
+        alertArchiveRepository,
     );
     const controller = createProductController(supplyChainService);
 

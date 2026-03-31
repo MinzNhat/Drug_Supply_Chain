@@ -6,6 +6,7 @@ import { errorHandler } from "./middleware/error/error-handler.js";
 import { requestContextMiddleware } from "./middleware/request-context/request-context.middleware.js";
 import { createAuthRoutes } from "./routes/auth/auth.routes.js";
 import { createProductRoutes } from "./routes/product/product.routes.js";
+import { createRegulatorRoutes } from "./routes/regulator/regulator.routes.js";
 import { logger } from "./utils/logger/logger.js";
 
 /**
@@ -47,6 +48,7 @@ export const createApp = () => {
     // Versioned API routes.
     app.use("/api/v1/auth", createAuthRoutes());
     app.use("/api/v1", createProductRoutes());
+    app.use("/api/v1/regulator", createRegulatorRoutes());
 
     // Centralized error handler with standardized error shape.
     app.use(errorHandler);
