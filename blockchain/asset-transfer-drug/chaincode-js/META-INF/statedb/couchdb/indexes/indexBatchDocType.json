@@ -1,0 +1,8 @@
+{
+    "index": {
+        "fields": ["docType", "batchID", "ownerMSP", "status"]
+    },
+    "ddoc": "indexBatchDocType",
+    "name": "indexBatchDocType",
+    "type": "json"
+}

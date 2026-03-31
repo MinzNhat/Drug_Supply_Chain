@@ -1,0 +1,62 @@
+# OS and editor artifacts
+.DS_Store
+*~
+*#
+.#*
+.*.sw*
+.project
+.vscode/
+.idea/
+.gradle/
+.classpath
+.settings/
+
+# Environment and runtime files
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.log
+*.pid
+
+# Agent local memory state (not part of project docs)
+agent-memory/
+
+# Common dependency and build outputs
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+target/
+vendor/
+.venv/
+**/.venv/
+
+# Blockchain generated files
+blockchain/bin/
+blockchain/builders/
+blockchain/external-chaincode/
+
+# Asset transfer generated artifacts
+blockchain/asset-transfer-drug/chaincode-js/node_modules/
+blockchain/asset-transfer-drug/infrastructure/canonical/channel-artifacts/
+blockchain/asset-transfer-drug/infrastructure/canonical/organizations/
+
+# Fabric test-network generated artifacts
+blockchain/test-network/channel-artifacts/*.tx
+blockchain/test-network/channel-artifacts/*.block
+blockchain/test-network/channel-artifacts/*.json
+blockchain/test-network/channel-artifacts/*.pb
+blockchain/test-network/ledgers/
+blockchain/test-network/ledgers-backup/
+blockchain/test-network/organizations/fabric-ca/ordererOrg/*
+blockchain/test-network/organizations/fabric-ca/org1/*
+blockchain/test-network/organizations/fabric-ca/org2/*
+blockchain/test-network/addOrg3/fabric-ca/org3/*
+blockchain/test-network/organizations/ordererOrganizations/*
+blockchain/test-network/organizations/peerOrganizations/*
+blockchain/test-network/system-genesis-block/*
+blockchain/test-network/org3-artifacts/crypto-config/*
+blockchain/test-network/*.tar.gz
+blockchain/test-network/log.txt

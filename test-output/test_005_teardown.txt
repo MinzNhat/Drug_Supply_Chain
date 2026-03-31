@@ -1,0 +1,63 @@
+description: Stop all services and clean runtime artifacts after validation.
+input: /Users/minznhat/Desktop/DATN/scripts/run-all.sh down
+started_at: 2026-03-29T16:42:06Z
+output:
+ Container drug-guard-backend Stopping 
+ Container drug-guard-backend Stopped 
+ Container drug-guard-backend Removing 
+ Container drug-guard-backend Removed 
+ Container qr-service Stopping 
+ Container qr-service Stopped 
+ Container qr-service Removing 
+ Container qr-service Removed 
+ Container qr-python-core Stopping 
+ Container drug-guard-mongo Stopping 
+ Container drug-guard-mongo Stopped 
+ Container drug-guard-mongo Removing 
+ Container drug-guard-mongo Removed 
+ Container qr-python-core Stopped 
+ Container qr-python-core Removing 
+ Container qr-python-core Removed 
+ Volume datn_mongo-data Removing 
+ Network datn_app-network Removing 
+ Volume datn_mongo-data Removed 
+ Network datn_app-network Removed 
+[0;34mUsing docker and docker-compose[0m
+[0;34mStopping network[0m
+[0;34mRemoving remaining containers[0m
+[0;34mRemoving generated chaincode docker images[0m
+Untagged: dev-peer0.org2.example.com-drugtracker_1.0-c204fbccfc72a0d7606d835699462dcfa263203c2264cf50d34f97a22b227d82-a441e34704a48974ec104eb4409c779d1c838171a628a5ca8a4ae70a33268fef:latest
+Deleted: sha256:ecbd170ac9078a6ceabacb397783a0942d15d4ebf9baa99fc245bff20470a7ee
+Untagged: dev-peer0.org1.example.com-drugtracker_1.0-c204fbccfc72a0d7606d835699462dcfa263203c2264cf50d34f97a22b227d82-e41f528d8f631634486262078e3b0c0d0881a87c6749ecaaeb2e00c32e6dfcfd:latest
+Deleted: sha256:2ea8e804dedba46ab573654bfb618f398c47fcae48052c44fdf117ba291b94b8
+ Container peer0.org1.example.com Stopping 
+ Container orderer.example.com Stopping 
+ Container peer0.org2.example.com Stopping 
+ Container peer0.org3.example.com Stopping 
+ Container peer0.org2.example.com Stopped 
+ Container peer0.org2.example.com Removing 
+ Container peer0.org2.example.com Removed 
+ Container orderer.example.com Stopped 
+ Container orderer.example.com Removing 
+ Container orderer.example.com Removed 
+ Container peer0.org3.example.com Stopped 
+ Container peer0.org3.example.com Removing 
+ Container peer0.org3.example.com Removed 
+ Container peer0.org1.example.com Stopped 
+ Container peer0.org1.example.com Removing 
+ Container peer0.org1.example.com Removed 
+ Network fabric_test Removing 
+ Volume compose_peer0.org1.example.com Removing 
+ Volume compose_peer0.org2.example.com Removing 
+ Volume compose_peer0.org3.example.com Removing 
+ Volume compose_orderer.example.com Removing 
+ Volume compose_peer0.org2.example.com Removed 
+ Volume compose_peer0.org1.example.com Removed 
+ Volume compose_peer0.org3.example.com Removed 
+ Volume compose_orderer.example.com Removed 
+ Network fabric_test Removed 
+Cleaning up created Fabric chaincode containers...
+Done: mode=down
+
+ended_at: 2026-03-29T16:42:11Z
+status: SUCCESS

@@ -1,0 +1,141 @@
+openapi: 3.0.3
+info:
+    title: Protected QR Service API
+    version: 1.0.0
+    description: Fixed-Geometry Physical-Digital QR Generator (stateless core + audit API)
+servers:
+    - url: http://localhost:8080
+paths:
+    /api/v1/qr/generate:
+        post:
+            summary: Generate protected QR
+            description: Generate a fixed-geometry QR token and return a Base64 PNG image.
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: "#/components/schemas/GenerateRequest"
+            responses:
+                "200":
+                    description: QR generated
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/GenerateResponse"
+                "422":
+                    description: Validation error
+                "400":
+                    description: Invalid request
+                "500":
+                    description: Server error
+    /api/v1/qr/verify:
+        post:
+            summary: Verify protected QR
+            description: Verify the copy-sensitive pattern and return confidence + decoded metadata.
+            requestBody:
+                required: true
+                content:
+                    multipart/form-data:
+                        schema:
+                            type: object
+                            properties:
+                                image:
+                                    type: string
+                                    format: binary
+                            required:
+                                - image
+            responses:
+                "200":
+                    description: Verification result
+                    content:
+                        application/json:
+                            schema:
+                                $ref: "#/components/schemas/VerifyResponse"
+                "422":
+                    description: Validation error
+                "400":
+                    description: Invalid request
+                "500":
+                    description: Server error
+components:
+    schemas:
+        GenerateRequest:
+            type: object
+            properties:
+                data_hash:
+                    type: string
+                    description: Hex string (8 chars = 4 bytes)
+                    example: a1b2c3d4
+                metadata_series:
+                    type: string
+                    description: Hex string (16 chars = 8 bytes)
+                    example: 1234567890abcdef
+                metadata_issued:
+                    type: string
+                    description: Hex string (16 chars = 8 bytes)
+                    example: 0011223344556677
+                metadata_expiry:
+                    type: string
+                    description: Hex string (16 chars = 8 bytes)
+                    example: 8899aabbccddeeff
+            required:
+                - data_hash
+                - metadata_series
+                - metadata_issued
+                - metadata_expiry
+        GenerateResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                data:
+                    type: object
+                    properties:
+                        token:
+                            type: string
+                            example: base64url.payload.hmac
+                        qr_image_base64:
+                            type: string
+                            description: PNG image base64
+        ErrorResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: false
+                error:
+                    type: object
+                    properties:
+                        message:
+                            type: string
+                            example: Invalid request body
+                        details:
+                            type: object
+                            additionalProperties: true
+        VerifyResponse:
+            type: object
+            properties:
+                is_authentic:
+                    type: boolean
+                    example: true
+                confidence_score:
+                    type: number
+                    example: 0.85
+                decoded_meta:
+                    type: object
+                    nullable: true
+                    properties:
+                        data_hash:
+                            type: string
+                            example: a1b2c3d4
+                        metadata_series:
+                            type: string
+                            example: 1234567890abcdef
+                        metadata_issued:
+                            type: string
+                            example: 0011223344556677
+                        metadata_expiry:
+                            type: string
+                            example: 8899aabbccddeeff

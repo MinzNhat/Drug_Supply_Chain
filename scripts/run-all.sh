@@ -1,0 +1,241 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BLOCKCHAIN_SCRIPT_DIR="${ROOT_DIR}/scripts/blockchain"
+ADD_ORG3_DIR="${ROOT_DIR}/blockchain/test-network/addOrg3"
+COMPOSE_FILE="${ROOT_DIR}/docker-compose.yml"
+MODE="${1:-full}"
+
+STACK_CHANNEL_NAME="${STACK_CHANNEL_NAME:-mychannel}"
+STACK_INCLUDE_ORG3="${STACK_INCLUDE_ORG3:-true}"
+STACK_BUILD_IMAGES="${STACK_BUILD_IMAGES:-true}"
+STACK_BUILD_E2E_RUNNER="${STACK_BUILD_E2E_RUNNER:-auto}"
+STACK_AUTO_GENERATE_SECRETS="${STACK_AUTO_GENERATE_SECRETS:-true}"
+E2E_RUNNER_PREPARED="false"
+
+usage() {
+    cat <<'EOF'
+Usage:
+    ./scripts/run-all.sh [prereq|up|test|test-transfer|full|down|status]
+
+Modes:
+  prereq  Install Fabric prerequisites via test-network helper.
+  up      Start Fabric network + chaincode + org3 and app services.
+  test    Run runtime E2E against running stack.
+    test-transfer  Run transfer-batch E2E against running stack.
+    full    Run up then runtime E2E and transfer-batch E2E.
+  down    Stop app services and tear down Fabric network.
+  status  Print app and Fabric container status.
+
+Optional environment variables:
+  STACK_CHANNEL_NAME=mychannel
+  STACK_INCLUDE_ORG3=true|false
+  STACK_BUILD_IMAGES=true|false
+    STACK_BUILD_E2E_RUNNER=auto|true|false
+EOF
+}
+
+need_cmd() {
+    local cmd="$1"
+    if ! command -v "${cmd}" >/dev/null 2>&1; then
+        echo "Missing required command: ${cmd}"
+        exit 1
+    fi
+}
+
+compose_cmd() {
+    docker compose -f "${COMPOSE_FILE}" "$@"
+}
+
+is_insecure_secret() {
+    local value="${1:-}"
+    local lowered
+    lowered="$(printf '%s' "${value}" | tr '[:upper:]' '[:lower:]')"
+
+    case "${lowered}" in
+        ""|change_me|changeme|replace_me|replace-with-strong-secret|replace_with_strong_secret)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+generate_secret() {
+    if command -v openssl >/dev/null 2>&1; then
+        openssl rand -hex 32
+        return
+    fi
+
+    od -An -N32 -tx1 /dev/urandom | tr -d ' \n'
+}
+
+ensure_runtime_secret() {
+    local env_key="$1"
+    local file_env_key="$2"
+    local label="$3"
+    local current_value="${!env_key:-}"
+    local file_value="${!file_env_key:-}"
+
+    if [[ -n "${file_value}" ]]; then
+        return
+    fi
+
+    if ! is_insecure_secret "${current_value}"; then
+        return
+    fi
+
+    if [[ "${STACK_AUTO_GENERATE_SECRETS}" != "true" ]]; then
+        echo "Missing secure ${label}. Set ${env_key} or ${file_env_key}."
+        exit 1
+    fi
+
+    current_value="$(generate_secret)"
+    export "${env_key}=${current_value}"
+    echo "Generated ephemeral ${label} for this run (${env_key})."
+}
+
+prepare_runtime_secrets() {
+    ensure_runtime_secret "DATN_BACKEND_JWT_SECRET" "DATN_BACKEND_JWT_SECRET_FILE" "backend JWT secret"
+    ensure_runtime_secret "DATN_QR_HMAC_SECRET" "DATN_QR_HMAC_SECRET_FILE" "protected-qr HMAC secret"
+}
+
+ensure_e2e_runner_image() {
+    if [[ "${E2E_RUNNER_PREPARED}" == "true" ]]; then
+        return
+    fi
+
+    local should_build="false"
+    case "${STACK_BUILD_E2E_RUNNER}" in
+        true)
+            should_build="true"
+            ;;
+        false)
+            should_build="false"
+            ;;
+        auto)
+            if [[ "${STACK_BUILD_IMAGES}" == "true" ]]; then
+                should_build="true"
+            elif ! docker image inspect datn-e2e-runner:latest >/dev/null 2>&1; then
+                should_build="true"
+            fi
+            ;;
+        *)
+            echo "Invalid STACK_BUILD_E2E_RUNNER: ${STACK_BUILD_E2E_RUNNER}"
+            exit 1
+            ;;
+    esac
+
+    if [[ "${should_build}" == "true" ]]; then
+        compose_cmd build e2e-runner
+    fi
+
+    E2E_RUNNER_PREPARED="true"
+}
+
+wait_for_http() {
+    local url="$1"
+    local retries="${2:-80}"
+    local delay="${3:-2}"
+
+    for _ in $(seq 1 "${retries}"); do
+        if curl -fsS "${url}" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep "${delay}"
+    done
+
+    echo "Service not ready: ${url}"
+    return 1
+}
+
+run_prereq() {
+    "${BLOCKCHAIN_SCRIPT_DIR}/blockchain-run.sh" prereq
+}
+
+run_up() {
+    "${BLOCKCHAIN_SCRIPT_DIR}/blockchain-run.sh" full
+
+    if [[ "${STACK_INCLUDE_ORG3}" == "true" ]]; then
+        (cd "${ADD_ORG3_DIR}" && ./addOrg3.sh up -c "${STACK_CHANNEL_NAME}")
+    fi
+
+    if [[ "${STACK_BUILD_IMAGES}" == "true" ]]; then
+        compose_cmd up -d --build mongo qr-python-core qr-service backend
+    else
+        compose_cmd up -d mongo qr-python-core qr-service backend
+    fi
+
+    wait_for_http "http://localhost:8080/health" 80 2
+    wait_for_http "http://localhost:8090/health" 80 2
+
+    echo "Stack is ready."
+}
+
+run_test() {
+    ensure_e2e_runner_image
+    compose_cmd --profile e2e run --rm e2e-runner
+}
+
+run_test_transfer() {
+    ensure_e2e_runner_image
+    compose_cmd --profile e2e run --rm e2e-runner node scripts/backend/e2e-transfer-batch.mjs
+}
+
+run_down() {
+    compose_cmd down -v --remove-orphans || true
+    "${BLOCKCHAIN_SCRIPT_DIR}/blockchain-run.sh" down || true
+}
+
+run_status() {
+    compose_cmd ps
+    echo
+    docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'orderer|peer0\.org|ca_org|chaincode' || true
+}
+
+main() {
+    need_cmd docker
+    need_cmd curl
+
+    if [[ "${MODE}" == "-h" || "${MODE}" == "--help" ]]; then
+        usage
+        return 0
+    fi
+
+    prepare_runtime_secrets
+
+    case "${MODE}" in
+        prereq)
+            run_prereq
+            ;;
+        up)
+            run_up
+            ;;
+        test)
+            run_test
+            ;;
+        test-transfer)
+            run_test_transfer
+            ;;
+        full)
+            run_up
+            run_test
+            run_test_transfer
+            ;;
+        down)
+            run_down
+            ;;
+        status)
+            run_status
+            ;;
+        *)
+            echo "Unknown mode: ${MODE}"
+            usage
+            exit 1
+            ;;
+    esac
+}
+
+main

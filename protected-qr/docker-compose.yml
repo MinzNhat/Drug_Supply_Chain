@@ -1,0 +1,39 @@
+services:
+    mongo:
+        image: mongo:6
+        container_name: protected-qr-mongo
+        ports:
+            - "27017:27017"
+        volumes:
+            - mongo-data:/data/db
+
+    python-core:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile.python
+        container_name: protected-qr-python
+        ports:
+            - "8000:8000"
+
+    api:
+        build:
+            context: .
+            dockerfile: docker/Dockerfile.node
+        container_name: protected-qr-api
+        ports:
+            - "8080:8080"
+        environment:
+            PORT: 8080
+            MONGO_URI: mongodb://mongo:27017
+            MONGO_DB: protected_qr
+            PYTHON_SERVICE_URL: http://python-core:8000
+            HMAC_SECRET: ${DATN_QR_HMAC_SECRET:-}
+            HMAC_SECRET_FILE: ${DATN_QR_HMAC_SECRET_FILE:-}
+            LOG_LEVEL: info
+            REQUEST_TIMEOUT_MS: 10000
+        depends_on:
+            - mongo
+            - python-core
+
+volumes:
+    mongo-data:

@@ -1,0 +1,182 @@
+---
+################################################################################
+# Canonical configtx profile for drug supply consortium
+# - 3-node EtcdRaft orderer cluster managed by RegulatorMSP
+# - Application orgs: RegulatorMSP, ManufacturerMSP (DistributorMSP add-on later)
+# - Centralized governance: Admins + LifecycleEndorsement controlled by RegulatorMSP
+################################################################################
+
+Organizations:
+  - &Regulator
+    Name: RegulatorMSP
+    ID: RegulatorMSP
+    MSPDir: ../organizations/peerOrganizations/regulator.example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin', 'RegulatorMSP.peer', 'RegulatorMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin', 'RegulatorMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.peer', 'RegulatorMSP.admin')"
+    AnchorPeers:
+      - Host: peer0.regulator.example.com
+        Port: 7051
+
+  - &Manufacturer
+    Name: ManufacturerMSP
+    ID: ManufacturerMSP
+    MSPDir: ../organizations/peerOrganizations/manufacturer.example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.admin', 'ManufacturerMSP.peer', 'ManufacturerMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.admin', 'ManufacturerMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('ManufacturerMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.manufacturer.example.com
+        Port: 9051
+
+  - &Distributor
+    Name: DistributorMSP
+    ID: DistributorMSP
+    MSPDir: ../organizations/peerOrganizations/distributor.example.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('DistributorMSP.admin', 'DistributorMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('DistributorMSP.admin', 'DistributorMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('DistributorMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('DistributorMSP.client')"
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_5: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    # Requirement: only Regulator admin controls channel config changes
+    Admins:
+      Type: Signature
+      Rule: "OR('RegulatorMSP.admin')"
+    # Requirement: only Regulator admin controls chaincode lifecycle governance
+    LifecycleEndorsement:
+      Type: Signature
+      Rule: "OR('RegulatorMSP.admin')"
+    # Runtime tx endorsement uses org-level Endorsement policies
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "ANY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer0.regulator.example.com:7050
+    - orderer1.regulator.example.com:8050
+    - orderer2.regulator.example.com:9050
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 500
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 2 MB
+  EtcdRaft:
+    Consenters:
+      - Host: orderer0.regulator.example.com
+        Port: 7050
+        ClientTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer0.regulator.example.com/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer0.regulator.example.com/tls/server.crt
+      - Host: orderer1.regulator.example.com
+        Port: 8050
+        ClientTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer1.regulator.example.com/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer1.regulator.example.com/tls/server.crt
+      - Host: orderer2.regulator.example.com
+        Port: 9050
+        ClientTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer2.regulator.example.com/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer2.regulator.example.com/tls/server.crt
+  Organizations:
+    - *Regulator
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: Signature
+      Rule: "OR('RegulatorMSP.admin')"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+  Capabilities:
+    <<: *OrdererCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: Signature
+      Rule: "OR('RegulatorMSP.admin')"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  CanonicalGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Capabilities: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Regulator
+        - *Manufacturer
+      Capabilities: *ApplicationCapabilities
+
+  CanonicalChannelRaft:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Capabilities: *OrdererCapabilities
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Regulator
+        - *Manufacturer
+      Capabilities: *ApplicationCapabilities

@@ -1,0 +1,31 @@
+import mongoose from "mongoose";
+
+const { Schema } = mongoose;
+
+/**
+ * Read-optimized snapshot of batch state used by list/filter API endpoints.
+ */
+const batchStateSchema = new Schema(
+    {
+        batchID: { type: String, required: true, unique: true, index: true },
+        drugName: { type: String, default: "", index: true },
+        manufacturerMSP: { type: String, default: "", index: true },
+        ownerMSP: { type: String, default: "", index: true },
+        status: { type: String, default: "", index: true },
+        transferStatus: { type: String, default: "", index: true },
+        expiryDate: { type: Date, default: null, index: true },
+        scanCount: { type: Number, default: 0 },
+        totalSupply: { type: Number, default: 0 },
+        lastLedgerSyncAt: { type: Date, default: Date.now, index: true },
+        batch: { type: Schema.Types.Mixed, required: true },
+    },
+    { timestamps: true },
+);
+
+// Composite index optimized for owner/status transfer list queries.
+batchStateSchema.index({ ownerMSP: 1, status: 1, transferStatus: 1 });
+
+/**
+ * Mongoose model for batch snapshot read model.
+ */
+export const BatchState = mongoose.model("BatchState", batchStateSchema);

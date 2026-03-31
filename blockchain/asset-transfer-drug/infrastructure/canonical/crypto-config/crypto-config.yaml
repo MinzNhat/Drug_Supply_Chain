@@ -1,0 +1,40 @@
+################################################################################
+# Phase 1 canonical crypto-config template
+# - Regulator: 3 orderers + 2 peers
+# - Manufacturer: 2 peers
+# - Distributor: identities only (no peer in phase 1)
+################################################################################
+
+OrdererOrgs:
+  - Name: RegulatorOrderer
+    Domain: regulator.example.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer0
+      - Hostname: orderer1
+      - Hostname: orderer2
+
+PeerOrgs:
+  - Name: Regulator
+    Domain: regulator.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+    Users:
+      Count: 1
+
+  - Name: Manufacturer
+    Domain: manufacturer.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 2
+    Users:
+      Count: 1
+
+  - Name: Distributor
+    Domain: distributor.example.com
+    EnableNodeOUs: true
+    Template:
+      Count: 0
+    Users:
+      Count: 1

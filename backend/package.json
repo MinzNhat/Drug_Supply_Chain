@@ -1,0 +1,33 @@
+{
+  "name": "drug-guard-backend",
+  "version": "1.0.0",
+  "description": "DrugGuard main backend API",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
+    "test": "node --test test/unit",
+    "test:integration": "node --test test/integration",
+    "e2e:runtime": "node ../scripts/backend/e2e-runtime.mjs",
+    "e2e:transfer": "node ../scripts/backend/e2e-transfer-batch.mjs"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.13.4",
+    "@hyperledger/fabric-gateway": "^1.9.0",
+    "axios": "^1.7.9",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "form-data": "^4.0.0",
+    "helmet": "^7.1.0",
+    "jimp": "^0.22.10",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.5.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "winston": "^3.13.0",
+    "zod": "^3.23.8"
+  }
+}

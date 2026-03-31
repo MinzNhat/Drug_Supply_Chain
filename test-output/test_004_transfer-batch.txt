@@ -1,0 +1,30 @@
+description: Validate ownership transfer workflow with dedicated ship/receive E2E flow.
+input: env STACK_BUILD_IMAGES=false STACK_BUILD_E2E_RUNNER=false /Users/minznhat/Desktop/DATN/scripts/run-all.sh test-transfer
+started_at: 2026-03-29T16:41:54Z
+output:
+ Container qr-python-core Running 
+ Container drug-guard-mongo Running 
+ Container qr-service Running 
+ Container drug-guard-backend Running 
+ Container qr-python-core Waiting 
+ Container drug-guard-mongo Waiting 
+ Container drug-guard-mongo Healthy 
+ Container qr-python-core Healthy 
+ Container qr-service Waiting 
+ Container drug-guard-mongo Waiting 
+ Container qr-service Healthy 
+ Container drug-guard-mongo Healthy 
+ Container drug-guard-backend Waiting 
+ Container drug-guard-backend Healthy 
+ Container datn-e2e-runner-run-df6ac0c7b0cf Creating 
+ Container datn-e2e-runner-run-df6ac0c7b0cf Created 
+{
+  "ok": true,
+  "batchId": "BATCH_1774802517994_03B4F8",
+  "shippedTo": "DistributorMSP",
+  "ownerMSP": "DistributorMSP",
+  "transferStatus": "NONE"
+}
+
+ended_at: 2026-03-29T16:42:06Z
+status: SUCCESS
