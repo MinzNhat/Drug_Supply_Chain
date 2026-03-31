@@ -15,6 +15,7 @@ This repository uses a centralized documentation structure under `docs/`.
 - `docs/backend/supply-chain-api.md`
 - `docs/backend/integration-contract.md`
 - `docs/backend/environment-variables.md`
+- `docs/backend/fabric-profile-migration.md`
 - `docs/backend/conventions.md`
 - `docs/backend/runbook-local-e2e.md`
 

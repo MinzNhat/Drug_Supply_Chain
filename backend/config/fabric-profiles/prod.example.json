@@ -1,0 +1,32 @@
+{
+  "profile": "prod",
+  "channelName": "supplychain-prod",
+  "chaincodeName": "drugtracker",
+  "publicScanRole": "Regulator",
+  "organizations": {
+    "Manufacturer": {
+      "mspId": "ManufacturerMSP",
+      "peerEndpoint": "peer0.manufacturer.prod.example.com:7051",
+      "peerHostAlias": "peer0.manufacturer.prod.example.com",
+      "tlsCertPath": "/etc/hyperledger/fabric/manufacturer/tls/ca.crt",
+      "certPath": "/etc/hyperledger/fabric/manufacturer/signcerts/cert.pem",
+      "keyPath": "/etc/hyperledger/fabric/manufacturer/keystore"
+    },
+    "Distributor": {
+      "mspId": "DistributorMSP",
+      "peerEndpoint": "peer0.distributor.prod.example.com:7051",
+      "peerHostAlias": "peer0.distributor.prod.example.com",
+      "tlsCertPath": "/etc/hyperledger/fabric/distributor/tls/ca.crt",
+      "certPath": "/etc/hyperledger/fabric/distributor/signcerts/cert.pem",
+      "keyPath": "/etc/hyperledger/fabric/distributor/keystore"
+    },
+    "Regulator": {
+      "mspId": "RegulatorMSP",
+      "peerEndpoint": "peer0.regulator.prod.example.com:7051",
+      "peerHostAlias": "peer0.regulator.prod.example.com",
+      "tlsCertPath": "/etc/hyperledger/fabric/regulator/tls/ca.crt",
+      "certPath": "/etc/hyperledger/fabric/regulator/signcerts/cert.pem",
+      "keyPath": "/etc/hyperledger/fabric/regulator/keystore"
+    }
+  }
+}

@@ -88,6 +88,9 @@ services:
             LOG_LEVEL: info
             REQUEST_TIMEOUT_MS: 10000
             FABRIC_ENABLED: true
+            FABRIC_PROFILE: local
+            FABRIC_PROFILE_FILE: ${DATN_BACKEND_FABRIC_PROFILE_FILE:-}
+            FABRIC_STRICT_CREDENTIALS: false
             FABRIC_CHANNEL_NAME: mychannel
             FABRIC_CHAINCODE_NAME: drugtracker
             FABRIC_EVALUATE_TIMEOUT_MS: 5000

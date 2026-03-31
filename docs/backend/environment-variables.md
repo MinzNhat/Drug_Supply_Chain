@@ -18,6 +18,9 @@
 | `AI_VERIFICATION_TIMEOUT_MS`         | No       | `10000`                 | Timeout for AI verification calls.             |
 | `AI_VERIFICATION_FAIL_OPEN`          | No       | `true`                  | Allow verification to continue if AI is down.  |
 | `FABRIC_ENABLED`                     | Yes      | `true`                  | Enables Fabric Gateway integration.            |
+| `FABRIC_PROFILE`                     | No       | `local`                 | Fabric runtime profile (`local|staging|prod`). |
+| `FABRIC_PROFILE_FILE`                | No       | `backend/config/fabric-profiles/staging.example.json` | JSON profile file for org endpoints and credentials. |
+| `FABRIC_STRICT_CREDENTIALS`          | No       | `false` (local), `true` (staging/prod) | Fail startup on invalid/missing Fabric material. |
 | `FABRIC_CHANNEL_NAME`                | Yes      | `mychannel`             | Fabric channel name.                           |
 | `FABRIC_CHAINCODE_NAME`              | Yes      | `drugtracker`           | Chaincode/contract name.                       |
 | `FABRIC_EVALUATE_TIMEOUT_MS`         | No       | `5000`                  | Evaluate call deadline.                        |
@@ -32,6 +35,24 @@ Role-bound identity material:
 - `FABRIC_MANUFACTURER_*`
 - `FABRIC_DISTRIBUTOR_*`
 - `FABRIC_REGULATOR_*`
+
+Profile model:
+
+- `local`: allows localhost/`host.docker.internal` and test-network credential layouts.
+- `staging`: requires non-local endpoints and non-test-network credential paths.
+- `prod`: same constraints as staging with production channel/peer targets.
+
+Profile files:
+
+- `backend/config/fabric-profiles/local.example.json`
+- `backend/config/fabric-profiles/staging.example.json`
+- `backend/config/fabric-profiles/prod.example.json`
+
+Resolution priority for Fabric org fields:
+
+1. `FABRIC_<ROLE>_*` environment variables
+2. `FABRIC_PROFILE_FILE` JSON values
+3. Role default MSP fallback (`ManufacturerMSP`, `DistributorMSP`, `RegulatorMSP`)
 
 MSP alias behavior:
 
@@ -94,3 +115,14 @@ Root stack secret inputs:
 - `DATN_QR_HMAC_SECRET` or `DATN_QR_HMAC_SECRET_FILE`
 
 If missing in local runs, `scripts/run-all.sh` generates ephemeral runtime values by default.
+
+For root local docker-compose, backend uses:
+
+- `FABRIC_PROFILE=local`
+- `FABRIC_STRICT_CREDENTIALS=false`
+
+To test staging/prod style config locally, mount your credential bundle and set:
+
+- `FABRIC_PROFILE=staging` (or `prod`)
+- `FABRIC_PROFILE_FILE=/path/to/your-profile.json`
+- `FABRIC_STRICT_CREDENTIALS=true`

@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import fs from "fs";
+import path from "path";
 
 // Load environment variables from .env when present.
 dotenv.config();
@@ -80,26 +81,151 @@ const asPositiveInt = (value, fallback) => {
     return parsed;
 };
 
+const asNonEmptyString = (value, fallback = "") => {
+    if (typeof value !== "string") {
+        return fallback;
+    }
+
+    const normalized = value.trim();
+    return normalized.length > 0 ? normalized : fallback;
+};
+
+const resolveFilePath = (inputPath) => {
+    if (!inputPath) {
+        return "";
+    }
+
+    return path.isAbsolute(inputPath)
+        ? inputPath
+        : path.resolve(process.cwd(), inputPath);
+};
+
+const FABRIC_PROFILES = ["local", "staging", "prod"];
+
+const normalizeFabricProfile = (value) => {
+    const normalized = asNonEmptyString(value, "local").toLowerCase();
+
+    if (!FABRIC_PROFILES.includes(normalized)) {
+        throw new Error(
+            `Invalid FABRIC_PROFILE: ${value}. Allowed: ${FABRIC_PROFILES.join(", ")}`,
+        );
+    }
+
+    return normalized;
+};
+
 const fabricEnabled = asBoolean(process.env.FABRIC_ENABLED, false);
 const aiVerificationEnabled = asBoolean(
     process.env.AI_VERIFICATION_ENABLED,
     false,
 );
 
-const buildFabricOrg = (prefix, defaultMspId) => {
+const fabricProfile = normalizeFabricProfile(process.env.FABRIC_PROFILE ?? "local");
+const fabricProfileFile = asNonEmptyString(process.env.FABRIC_PROFILE_FILE, "");
+
+const loadFabricProfileConfig = () => {
+    if (!fabricEnabled || !fabricProfileFile) {
+        return {};
+    }
+
+    const absoluteProfilePath = resolveFilePath(fabricProfileFile);
+
+    let raw = "";
+    try {
+        raw = fs.readFileSync(absoluteProfilePath, "utf8");
+    } catch (error) {
+        throw new Error(
+            `Cannot read FABRIC_PROFILE_FILE: ${absoluteProfilePath}`,
+        );
+    }
+
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (error) {
+        throw new Error(
+            `FABRIC_PROFILE_FILE is not valid JSON: ${absoluteProfilePath}`,
+        );
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error(
+            "FABRIC_PROFILE_FILE must contain a JSON object at root",
+        );
+    }
+
+    const fileProfile = normalizeFabricProfile(parsed.profile ?? fabricProfile);
+    if (fileProfile !== fabricProfile) {
+        throw new Error(
+            `FABRIC_PROFILE (${fabricProfile}) does not match FABRIC_PROFILE_FILE profile (${fileProfile})`,
+        );
+    }
+
+    return parsed;
+};
+
+const fabricProfileConfig = loadFabricProfileConfig();
+
+const fromEnvOrProfile = (envKey, profileValue, fallback = "") => {
+    const envValue = asNonEmptyString(process.env[envKey], "");
+    if (envValue) {
+        return envValue;
+    }
+
+    const profileText = asNonEmptyString(profileValue, "");
+    if (profileText) {
+        return profileText;
+    }
+
+    return fallback;
+};
+
+const buildFabricOrg = (prefix, defaultMspId, profileOrg = {}) => {
     const envPrefix = `FABRIC_${prefix}`;
     return {
-        mspId: requiredIf(fabricEnabled, `${envPrefix}_MSP_ID`, defaultMspId),
-        peerEndpoint: requiredIf(fabricEnabled, `${envPrefix}_PEER_ENDPOINT`),
-        peerHostAlias: requiredIf(
-            fabricEnabled,
-            `${envPrefix}_PEER_HOST_ALIAS`,
+        mspId: fromEnvOrProfile(
+            `${envPrefix}_MSP_ID`,
+            profileOrg.mspId,
+            defaultMspId,
         ),
-        tlsCertPath: requiredIf(fabricEnabled, `${envPrefix}_TLS_CERT_PATH`),
-        certPath: requiredIf(fabricEnabled, `${envPrefix}_CERT_PATH`),
-        keyPath: requiredIf(fabricEnabled, `${envPrefix}_KEY_PATH`),
+        peerEndpoint: fromEnvOrProfile(
+            `${envPrefix}_PEER_ENDPOINT`,
+            profileOrg.peerEndpoint,
+            "",
+        ),
+        peerHostAlias: fromEnvOrProfile(
+            `${envPrefix}_PEER_HOST_ALIAS`,
+            profileOrg.peerHostAlias,
+            "",
+        ),
+        tlsCertPath: fromEnvOrProfile(
+            `${envPrefix}_TLS_CERT_PATH`,
+            profileOrg.tlsCertPath,
+            "",
+        ),
+        certPath: fromEnvOrProfile(
+            `${envPrefix}_CERT_PATH`,
+            profileOrg.certPath,
+            "",
+        ),
+        keyPath: fromEnvOrProfile(
+            `${envPrefix}_KEY_PATH`,
+            profileOrg.keyPath,
+            "",
+        ),
     };
 };
+
+const fabricOrganizationsFromProfile =
+    fabricProfileConfig.organizations &&
+    typeof fabricProfileConfig.organizations === "object"
+        ? fabricProfileConfig.organizations
+        : {};
+
+const fabricStrictCredentials = asBoolean(
+    process.env.FABRIC_STRICT_CREDENTIALS,
+    fabricProfile !== "local",
+);
 
 /**
  * Runtime configuration for the API service.
@@ -164,8 +290,19 @@ export const config = {
      */
     fabric: {
         enabled: fabricEnabled,
-        channelName: process.env.FABRIC_CHANNEL_NAME ?? "mychannel",
-        chaincodeName: process.env.FABRIC_CHAINCODE_NAME ?? "drugtracker",
+        profile: fabricProfile,
+        profileFile: resolveFilePath(fabricProfileFile),
+        strictCredentials: fabricStrictCredentials,
+        channelName: fromEnvOrProfile(
+            "FABRIC_CHANNEL_NAME",
+            fabricProfileConfig.channelName,
+            "mychannel",
+        ),
+        chaincodeName: fromEnvOrProfile(
+            "FABRIC_CHAINCODE_NAME",
+            fabricProfileConfig.chaincodeName,
+            "drugtracker",
+        ),
         evaluateTimeoutMs: asPositiveInt(
             process.env.FABRIC_EVALUATE_TIMEOUT_MS,
             5000,
@@ -206,11 +343,27 @@ export const config = {
                 1200,
             ),
         },
-        publicScanRole: process.env.FABRIC_PUBLIC_SCAN_ROLE ?? "Regulator",
+        publicScanRole: fromEnvOrProfile(
+            "FABRIC_PUBLIC_SCAN_ROLE",
+            fabricProfileConfig.publicScanRole,
+            "Regulator",
+        ),
         organizations: {
-            Manufacturer: buildFabricOrg("MANUFACTURER", "ManufacturerMSP"),
-            Distributor: buildFabricOrg("DISTRIBUTOR", "DistributorMSP"),
-            Regulator: buildFabricOrg("REGULATOR", "RegulatorMSP"),
+            Manufacturer: buildFabricOrg(
+                "MANUFACTURER",
+                "ManufacturerMSP",
+                fabricOrganizationsFromProfile.Manufacturer,
+            ),
+            Distributor: buildFabricOrg(
+                "DISTRIBUTOR",
+                "DistributorMSP",
+                fabricOrganizationsFromProfile.Distributor,
+            ),
+            Regulator: buildFabricOrg(
+                "REGULATOR",
+                "RegulatorMSP",
+                fabricOrganizationsFromProfile.Regulator,
+            ),
         },
     },
 };
