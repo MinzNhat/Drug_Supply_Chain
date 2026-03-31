@@ -20,6 +20,13 @@ const required = (key, fallback) => {
     return value;
 };
 
+/**
+ * Load secret value from file path provided by environment.
+ *
+ * @param {string} filePath - Absolute or relative secret file path.
+ * @param {string} key - Logical env key for error context.
+ * @returns {string} Trimmed secret value.
+ */
 const readSecretFile = (filePath, key) => {
     if (!filePath) {
         throw new Error(`Missing required env: ${key}`);
@@ -40,6 +47,13 @@ const readSecretFile = (filePath, key) => {
     return value;
 };
 
+/**
+ * Resolve secret value from direct env or file-based env.
+ *
+ * @param {string} key - Direct env key (e.g. JWT_SECRET).
+ * @param {string} fileKey - File env key (e.g. JWT_SECRET_FILE).
+ * @returns {string} Secret value.
+ */
 const requiredSecret = (key, fileKey) => {
     const directValue = process.env[key];
     if (directValue) {
@@ -54,6 +68,14 @@ const requiredSecret = (key, fileKey) => {
     throw new Error(`Missing required env: ${key} or ${fileKey}`);
 };
 
+/**
+ * Read required env only when a runtime feature is enabled.
+ *
+ * @param {boolean} condition - Feature toggle state.
+ * @param {string} key - Environment key.
+ * @param {string=} fallback - Optional fallback value.
+ * @returns {string} Resolved value or empty string when disabled.
+ */
 const requiredIf = (condition, key, fallback) => {
     if (!condition) {
         return process.env[key] ?? fallback ?? "";
@@ -61,6 +83,13 @@ const requiredIf = (condition, key, fallback) => {
     return required(key, fallback);
 };
 
+/**
+ * Parse boolean-like env flags.
+ *
+ * @param {unknown} value - Raw value from env.
+ * @param {boolean} fallback - Default value.
+ * @returns {boolean} Parsed boolean value.
+ */
 const asBoolean = (value, fallback) => {
     if (value === undefined || value === null || value === "") {
         return fallback;
@@ -68,11 +97,25 @@ const asBoolean = (value, fallback) => {
     return ["1", "true", "yes", "on"].includes(String(value).toLowerCase());
 };
 
+/**
+ * Parse numeric env values with fallback.
+ *
+ * @param {unknown} value - Raw value from env.
+ * @param {number} fallback - Default numeric value.
+ * @returns {number} Parsed number or fallback.
+ */
 const asNumber = (value, fallback) => {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+/**
+ * Parse non-negative integer env values with fallback.
+ *
+ * @param {unknown} value - Raw value from env.
+ * @param {number} fallback - Default integer value.
+ * @returns {number} Parsed non-negative integer or fallback.
+ */
 const asPositiveInt = (value, fallback) => {
     const parsed = asNumber(value, fallback);
     if (!Number.isInteger(parsed) || parsed < 0) {

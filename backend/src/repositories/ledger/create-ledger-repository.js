@@ -6,6 +6,7 @@ import { logger } from "../../utils/logger/logger.js";
 import { DisabledLedgerRepository } from "./disabled-ledger.repository.js";
 import { FabricLedgerRepository } from "./fabric-ledger.repository.js";
 
+// Keep one repository instance for process lifetime to avoid duplicate gateway setup.
 let repositoryInstance;
 
 /**
