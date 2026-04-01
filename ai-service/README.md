@@ -10,6 +10,9 @@ It follows the same split pattern as Protected QR:
 
 - Accepts one packaging image (`multipart/form-data`, field `image`).
 - Runs YOLO inference using a custom model (`best.pt`).
+- Applies strict decision policy for regulated supply-chain checks:
+  - Reject when counterfeit score crosses threshold.
+  - Reject when authentic evidence is below minimum threshold.
 - Returns backend-compatible decision payload:
   - `accepted`
   - `is_authentic`
@@ -37,6 +40,9 @@ Python core endpoints:
   "is_authentic": true,
   "confidence_score": 0.84,
   "verdict": "AUTHENTIC",
+  "decision_reason": "authentic_signal_confirmed",
+  "counterfeit_min_score": 0.6,
+  "authentic_min_score": 0.75,
   "counterfeit_score": 0.11,
   "authentic_score": 0.84,
   "detections": [
@@ -76,6 +82,7 @@ Python core values:
 - `AI_INFERENCE_IMG_SIZE`
 - `AI_CONFIDENCE_THRESHOLD`
 - `AI_COUNTERFEIT_MIN_SCORE`
+- `AI_AUTHENTIC_MIN_SCORE`
 - `AI_COUNTERFEIT_LABELS`
 - `AI_AUTHENTIC_LABELS`
 

@@ -14,6 +14,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from decision_policy import decide_packaging_authenticity
 
 try:
     from ultralytics import YOLO
@@ -69,8 +70,9 @@ def parse_label_set(raw_text: str, defaults: set[str]) -> set[str]:
 MODEL_PATH = Path(os.getenv("AI_MODEL_PATH", "/models/best.pt")).expanduser()
 INFERENCE_DEVICE = os.getenv("AI_INFERENCE_DEVICE", "cpu")
 INFERENCE_IMG_SIZE = read_env_int("AI_INFERENCE_IMG_SIZE", 640)
-CONFIDENCE_THRESHOLD = read_env_float("AI_CONFIDENCE_THRESHOLD", 0.25)
-COUNTERFEIT_MIN_SCORE = read_env_float("AI_COUNTERFEIT_MIN_SCORE", 0.55)
+CONFIDENCE_THRESHOLD = read_env_float("AI_CONFIDENCE_THRESHOLD", 0.5)
+COUNTERFEIT_MIN_SCORE = read_env_float("AI_COUNTERFEIT_MIN_SCORE", 0.6)
+AUTHENTIC_MIN_SCORE = read_env_float("AI_AUTHENTIC_MIN_SCORE", 0.75)
 COUNTERFEIT_LABELS = parse_label_set(
     os.getenv("AI_COUNTERFEIT_LABELS", "counterfeit,fake,gia"),
     {"counterfeit", "fake", "gia"},
@@ -81,7 +83,7 @@ AUTHENTIC_LABELS = parse_label_set(
 )
 
 
-def resolve_model() -> YOLO:
+def resolve_model():
     """Lazy-load the YOLO model once for process lifetime."""
     global MODEL_INSTANCE
     global MODEL_LOAD_ERROR
@@ -179,15 +181,21 @@ def infer_detections(image_bgr: np.ndarray) -> dict:
         [float(item["confidence"]) for item in detections] or [0.0]
     )
 
-    has_counterfeit = counterfeit_score >= COUNTERFEIT_MIN_SCORE
-    accepted = not has_counterfeit
-    verdict = "AUTHENTIC" if accepted else "SUSPICIOUS"
+    accepted, verdict, decision_reason = decide_packaging_authenticity(
+        counterfeit_score=counterfeit_score,
+        authentic_score=authentic_score,
+        counterfeit_min_score=COUNTERFEIT_MIN_SCORE,
+        authentic_min_score=AUTHENTIC_MIN_SCORE,
+    )
 
     return {
         "accepted": accepted,
         "is_authentic": accepted,
         "confidence_score": round(max(max_detection_score, counterfeit_score), 4),
         "verdict": verdict,
+        "decision_reason": decision_reason,
+        "counterfeit_min_score": round(COUNTERFEIT_MIN_SCORE, 4),
+        "authentic_min_score": round(AUTHENTIC_MIN_SCORE, 4),
         "counterfeit_score": round(counterfeit_score, 4),
         "authentic_score": round(authentic_score, 4),
         "detections": detections,

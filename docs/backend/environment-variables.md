@@ -124,8 +124,9 @@ Python core variables:
 | `AI_MODEL_PATH`              | Yes      | `/models/best.pt`             | YOLO weights path used by `/verify`.                           |
 | `AI_INFERENCE_DEVICE`        | No       | `cpu`                         | Inference device (`cpu`, `mps`, `cuda:0` depending on runtime). |
 | `AI_INFERENCE_IMG_SIZE`      | No       | `640`                         | Inference image size.                                          |
-| `AI_CONFIDENCE_THRESHOLD`    | No       | `0.25`                        | Minimum detection confidence used by YOLO predict.             |
-| `AI_COUNTERFEIT_MIN_SCORE`   | No       | `0.55`                        | Minimum counterfeit label confidence that forces reject.       |
+| `AI_CONFIDENCE_THRESHOLD`    | No       | `0.5`                         | Minimum detection confidence used by YOLO predict (strict mode default). |
+| `AI_COUNTERFEIT_MIN_SCORE`   | No       | `0.6`                         | Minimum counterfeit label confidence that forces reject.       |
+| `AI_AUTHENTIC_MIN_SCORE`     | No       | `0.75`                        | Minimum authentic label confidence required for acceptance.    |
 | `AI_COUNTERFEIT_LABELS`      | No       | `counterfeit,fake,gia`        | Comma-separated aliases interpreted as counterfeit class.      |
 | `AI_AUTHENTIC_LABELS`        | No       | `authentic,genuine,real`      | Comma-separated aliases interpreted as authentic class.        |
 
@@ -139,6 +140,7 @@ Root compose convenience overrides:
 - `DATN_AI_INFERENCE_IMG_SIZE`
 - `DATN_AI_CONFIDENCE_THRESHOLD`
 - `DATN_AI_COUNTERFEIT_MIN_SCORE`
+- `DATN_AI_AUTHENTIC_MIN_SCORE`
 - `DATN_AI_COUNTERFEIT_LABELS`
 - `DATN_AI_AUTHENTIC_LABELS`
 
