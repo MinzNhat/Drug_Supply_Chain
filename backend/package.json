@@ -12,7 +12,8 @@
     "e2e:runtime": "node ../scripts/backend/e2e-runtime.mjs",
     "e2e:geo": "node ../scripts/backend/e2e-geo-flow.mjs",
     "e2e:transfer": "node ../scripts/backend/e2e-transfer-batch.mjs",
-    "e2e:transfer:negative": "node ../scripts/backend/e2e-transfer-negative.mjs"
+    "e2e:transfer:negative": "node ../scripts/backend/e2e-transfer-negative.mjs",
+    "e2e:ai": "node ../scripts/backend/e2e-ai-alerting.mjs"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.13.4",

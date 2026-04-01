@@ -5,9 +5,11 @@
 Run Blockchain + Protected QR + Backend locally and verify end-to-end flows:
 
 - Public scan verification flow.
+- AI edge-path scan behavior (reject, fail-open, fail-close).
 - Geo event ingest -> timeline -> heatmap API flow.
 - Ownership transfer flow (Ship then Receive).
 - Ownership transfer negative paths (forbidden actor, wrong receiver, repeated receive).
+- Regulator alert retrieval and report export after alert-triggering actions.
 
 ## Fast Path (Unified Workspace Command)
 
@@ -26,6 +28,7 @@ This single command:
 5. Runs geo-flow E2E (`scripts/backend/e2e-geo-flow.mjs`).
 6. Runs transfer-batch E2E (`scripts/backend/e2e-transfer-batch.mjs`).
 7. Runs transfer negative-path E2E (`scripts/backend/e2e-transfer-negative.mjs`).
+8. Runs AI edge-path + alert/report E2E (`scripts/backend/e2e-ai-alerting.mjs`).
 
 Stop everything:
 
@@ -152,6 +155,13 @@ Dedicated geo-flow E2E:
 ```bash
 cd backend
 npm run e2e:geo
+```
+
+Dedicated AI edge-path + alert/report E2E:
+
+```bash
+cd backend
+npm run e2e:ai
 ```
 
 ## 6. Run Automated Tests

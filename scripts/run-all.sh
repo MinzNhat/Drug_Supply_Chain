@@ -17,7 +17,7 @@ E2E_RUNNER_PREPARED="false"
 usage() {
     cat <<'EOF'
 Usage:
-    ./scripts/run-all.sh [prereq|up|test|test-geo|test-transfer|test-transfer-negative|full|down|status]
+    ./scripts/run-all.sh [prereq|up|test|test-geo|test-transfer|test-transfer-negative|test-ai|full|down|status]
 
 Modes:
   prereq  Install Fabric prerequisites via test-network helper.
@@ -26,7 +26,8 @@ Modes:
     test-geo Run geo-flow E2E against running stack.
     test-transfer  Run transfer-batch E2E against running stack.
     test-transfer-negative  Run transfer negative-path E2E against running stack.
-    full    Run up then runtime E2E, geo-flow E2E, transfer-batch E2E, and transfer negative-path E2E.
+    test-ai Run AI edge-path + alert/report E2E against running stack.
+    full    Run up then runtime E2E, geo-flow E2E, transfer-batch E2E, transfer negative-path E2E, and AI edge-path E2E.
   down    Stop app services and tear down Fabric network.
   status  Print app and Fabric container status.
 
@@ -196,6 +197,26 @@ run_test_transfer_negative() {
     compose_cmd --profile e2e run --rm e2e-runner node scripts/backend/e2e-transfer-negative.mjs
 }
 
+run_test_ai() {
+    if [[ "${STACK_BUILD_IMAGES}" == "true" ]]; then
+        compose_cmd --profile e2e-ai up -d --build ai-verifier-mock backend-ai-reject backend-ai-open backend-ai-close
+    else
+        compose_cmd --profile e2e-ai up -d ai-verifier-mock backend-ai-reject backend-ai-open backend-ai-close
+    fi
+
+    wait_for_http "http://localhost:8095/health" 80 2
+    wait_for_http "http://localhost:8093/health" 80 2
+    wait_for_http "http://localhost:8091/health" 80 2
+    wait_for_http "http://localhost:8092/health" 80 2
+
+    ensure_e2e_runner_image
+    compose_cmd --profile e2e --profile e2e-ai run --rm \
+        -e AI_REJECT_BASE_URL=http://backend-ai-reject:8090 \
+        -e AI_FAIL_OPEN_BASE_URL=http://backend-ai-open:8090 \
+        -e AI_FAIL_CLOSE_BASE_URL=http://backend-ai-close:8090 \
+        e2e-runner node scripts/backend/e2e-ai-alerting.mjs
+}
+
 run_down() {
     compose_cmd down -v --remove-orphans || true
     "${BLOCKCHAIN_SCRIPT_DIR}/blockchain-run.sh" down || true
@@ -237,12 +258,16 @@ main() {
         test-transfer-negative)
             run_test_transfer_negative
             ;;
+        test-ai)
+            run_test_ai
+            ;;
         full)
             run_up
             run_test
             run_test_geo
             run_test_transfer
             run_test_transfer_negative
+            run_test_ai
             ;;
         down)
             run_down

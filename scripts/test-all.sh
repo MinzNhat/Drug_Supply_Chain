@@ -59,7 +59,8 @@ run_full_suite() {
     run_step 4 "geo-flow-e2e" "Validate event ingest -> timeline -> heatmap API flow with auth scope assertions." env STACK_BUILD_IMAGES=false STACK_BUILD_E2E_RUNNER=false "${RUNNER}" test-geo
     run_step 5 "transfer-batch" "Validate ownership transfer workflow with dedicated ship/receive E2E flow." env STACK_BUILD_IMAGES=false STACK_BUILD_E2E_RUNNER=false "${RUNNER}" test-transfer
     run_step 6 "transfer-negative" "Validate forbidden actor, wrong owner MSP, and repeated receive paths preserve transfer state." env STACK_BUILD_IMAGES=false STACK_BUILD_E2E_RUNNER=false "${RUNNER}" test-transfer-negative
-    run_step 7 "teardown" "Stop all services and clean runtime artifacts after validation." "${RUNNER}" down
+    run_step 7 "ai-alerting-e2e" "Validate AI reject/fail-open/fail-close behavior and regulator alert/report API side effects." env STACK_BUILD_IMAGES=false STACK_BUILD_E2E_RUNNER=false "${RUNNER}" test-ai
+    run_step 8 "teardown" "Stop all services and clean runtime artifacts after validation." "${RUNNER}" down
 }
 
 run_single_mode() {
@@ -79,18 +80,21 @@ run_single_mode() {
         transfer-negative)
             run_step 6 "transfer-negative" "Validate forbidden actor, wrong owner MSP, and repeated receive paths preserve transfer state." "${RUNNER}" test-transfer-negative
             ;;
+        ai)
+            run_step 7 "ai-alerting-e2e" "Validate AI reject/fail-open/fail-close behavior and regulator alert/report API side effects." "${RUNNER}" test-ai
+            ;;
         geo)
             run_step 4 "geo-flow-e2e" "Validate event ingest -> timeline -> heatmap API flow with auth scope assertions." "${RUNNER}" test-geo
             ;;
         down)
-            run_step 7 "teardown" "Stop all services and clean runtime artifacts after validation." "${RUNNER}" down
+            run_step 8 "teardown" "Stop all services and clean runtime artifacts after validation." "${RUNNER}" down
             ;;
         full)
             run_full_suite
             ;;
         *)
             echo "Unknown mode: ${MODE}"
-            echo "Usage: ./scripts/test-all.sh [full|prereq|up|test|geo|transfer|transfer-negative|down]"
+            echo "Usage: ./scripts/test-all.sh [full|prereq|up|test|geo|transfer|transfer-negative|ai|down]"
             exit 1
             ;;
     esac
