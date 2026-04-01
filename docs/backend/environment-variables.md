@@ -17,6 +17,15 @@
 | `AI_VERIFICATION_URL`                | No       | `http://localhost:8700` | AI verification API base URL.                  |
 | `AI_VERIFICATION_TIMEOUT_MS`         | No       | `10000`                 | Timeout for AI verification calls.             |
 | `AI_VERIFICATION_FAIL_OPEN`          | No       | `true`                  | Allow verification to continue if AI is down.  |
+| `ALERT_SINK_ENABLED`                 | No       | `true`                  | Enable canonical alert sink delivery workflow. |
+| `ALERT_SINK_TYPE`                    | No       | `logger`                | Sink adapter type (`logger|webhook`).          |
+| `ALERT_SINK_RETRY_MAX_ATTEMPTS`      | No       | `3`                     | Max retry attempts for sink delivery.          |
+| `ALERT_SINK_RETRY_BASE_DELAY_MS`     | No       | `200`                   | Retry backoff base delay (ms).                 |
+| `ALERT_SINK_RETRY_MAX_DELAY_MS`      | No       | `2000`                  | Retry backoff upper bound (ms).                |
+| `ALERT_SINK_WEBHOOK_URL`             | No       | `https://sink.example/alerts` | Webhook endpoint for sink adapter.       |
+| `ALERT_SINK_WEBHOOK_TIMEOUT_MS`      | No       | `5000`                  | Webhook request timeout.                        |
+| `ALERT_SINK_WEBHOOK_AUTH_HEADER`     | No       | `authorization`         | Header name carrying webhook auth token.       |
+| `ALERT_SINK_WEBHOOK_AUTH_TOKEN`      | No       | `Bearer <token>`        | Webhook auth token value.                       |
 | `FABRIC_ENABLED`                     | Yes      | `true`                  | Enables Fabric Gateway integration.            |
 | `FABRIC_PROFILE`                     | No       | `local`                 | Fabric runtime profile (`local|staging|prod`). |
 | `FABRIC_PROFILE_FILE`                | No       | `backend/config/fabric-profiles/staging.example.json` | JSON profile file for org endpoints and credentials. |
@@ -59,6 +68,13 @@ MSP alias behavior:
 - API auth accepts both canonical MSPs (`ManufacturerMSP`, `DistributorMSP`, `RegulatorMSP`) and test-network aliases (`Org2MSP`, `Org3MSP`, `Org1MSP`).
 - Backend stores and uses canonical MSPs internally for consistent API contracts.
 - Fabric Gateway `*_MSP_ID` must match your actual certificate MSP (for Fabric test-network defaults: `Org2MSP`, `Org3MSP`, `Org1MSP`).
+
+Alert sink behavior:
+
+- Canonical keys delivered to sink: `SCAN_REJECTED`, `RECALL_ALERT`.
+- Delivery uses deterministic idempotency key and persists state in `AlertDelivery`.
+- Failures follow retry/backoff policy and persist to dead-letter queue (`AlertDeadLetter`) when exhausted.
+- Sink failures are non-blocking for core request flow (verify/recall still returns response).
 
 Each role needs:
 

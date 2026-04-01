@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { createRegulatorAlertsController } from "../../controllers/regulator/regulator-alerts.controller.js";
-import { LoggerAlertSinkAdapter } from "../../integrations/alert-sink/alert-sink.adapter.js";
 import { authMiddleware } from "../../middleware/auth/auth.middleware.js";
 import { requireRoleMiddleware } from "../../middleware/auth/require-role.middleware.js";
 import { createAlertArchiveRepository } from "../../repositories/alert/alert-archive.repository.js";
+import { createAlertSinkAdapter } from "../../services/alerts/alert-delivery.service.js";
 import { RegulatorAlertsService } from "../../services/alerts/regulator-alerts.service.js";
 
 /**
@@ -19,7 +19,7 @@ export const createRegulatorRoutes = (options = {}) => {
         options.service ??
         new RegulatorAlertsService(
             createAlertArchiveRepository(),
-            new LoggerAlertSinkAdapter(),
+            createAlertSinkAdapter(),
         );
     const controller = createRegulatorAlertsController(service);
 

@@ -12,6 +12,7 @@ import {
     emitCanonicalAlert,
     emitDecisionAlert,
 } from "../alerts/alert-taxonomy.mapper.js";
+import { logger } from "../../utils/logger/logger.js";
 
 /**
  * Convert number-like input to a fixed-width hexadecimal string.
@@ -86,17 +87,20 @@ export class SupplyChainService {
      * @param {import("../qr/qr.service.js").QrService} qrService
      * @param {import("../ai-verifier/ai-verifier.service.js").AiVerifierService | null} aiVerifierService
      * @param {{ save?: (payload: Record<string, unknown> | null) => Promise<Record<string, unknown> | null> } | null} alertArchiveRepository
+     * @param {{ dispatchAlert?: (payload: Record<string, unknown> | null) => Promise<Record<string, unknown>> } | null} alertDeliveryService
      */
     constructor(
         ledgerRepository,
         qrService,
         aiVerifierService = null,
         alertArchiveRepository = null,
+        alertDeliveryService = null,
     ) {
         this.ledgerRepository = ledgerRepository;
         this.qrService = qrService;
         this.aiVerifierService = aiVerifierService;
         this.alertArchiveRepository = alertArchiveRepository;
+        this.alertDeliveryService = alertDeliveryService;
     }
 
     /**
@@ -109,7 +113,50 @@ export class SupplyChainService {
             return;
         }
 
-        await this.alertArchiveRepository.save(alertPayload);
+        try {
+            await this.alertArchiveRepository.save(alertPayload);
+        } catch (error) {
+            logger.warn({
+                message: "canonical-alert-archive-failed",
+                canonicalKey: alertPayload?.canonicalKey ?? "",
+                batchID: alertPayload?.batchID ?? "",
+                traceId: alertPayload?.traceId ?? "",
+                error:
+                    error instanceof Error ? error.message : "Unknown archive error",
+            });
+        }
+    }
+
+    /**
+     * Dispatch alert payload to external sink without blocking core request path.
+     *
+     * @param {Record<string, unknown> | null} alertPayload - Emitted canonical alert payload.
+     */
+    dispatchAlertNonBlocking(alertPayload) {
+        if (!this.alertDeliveryService?.dispatchAlert) {
+            return;
+        }
+
+        void this.alertDeliveryService.dispatchAlert(alertPayload).catch((error) => {
+            logger.error({
+                message: "canonical-alert-dispatch-unhandled-error",
+                canonicalKey: alertPayload?.canonicalKey ?? "",
+                batchID: alertPayload?.batchID ?? "",
+                traceId: alertPayload?.traceId ?? "",
+                error:
+                    error instanceof Error ? error.message : "Unknown dispatch error",
+            });
+        });
+    }
+
+    /**
+     * Trigger alert side effects in order: archive first, then non-blocking sink delivery.
+     *
+     * @param {Record<string, unknown> | null} alertPayload - Emitted canonical alert payload.
+     */
+    async processAlertSideEffects(alertPayload) {
+        await this.archiveAlert(alertPayload);
+        this.dispatchAlertNonBlocking(alertPayload);
     }
 
     /**
@@ -297,7 +344,7 @@ export class SupplyChainService {
                 safetyLevel: result.safetyStatus.level,
             },
         });
-        await this.archiveAlert(decisionAlert);
+        await this.processAlertSideEffects(decisionAlert);
 
         if (!accepted) {
             throw new HttpException(
@@ -371,7 +418,7 @@ export class SupplyChainService {
                 status: batch?.status ?? "",
             },
         });
-        await this.archiveAlert(recallAlert);
+        await this.processAlertSideEffects(recallAlert);
 
         return {
             ...batch,

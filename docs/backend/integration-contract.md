@@ -72,8 +72,9 @@ Notes:
 - `POST /api/v1/verify` emits standardized taxonomy payload from decision code.
 - `POST /api/v1/batches/:batchId/recall` emits standardized `RECALL_ALERT` payload.
 - Emitted verify/recall alerts are archived in `AlertArchive` for regulator retrieval/export APIs.
-- Baseline report sink adapter is now wired for regulator export (`logger` channel).
-- Pluggable external sink and delivery reliability policy remains in P0-05 scope.
+- `SCAN_REJECTED` and `RECALL_ALERT` are now delivered through sink adapter interface (`logger|webhook`) with deterministic idempotency key.
+- Delivery state is tracked in `AlertDelivery` with retry/backoff and dead-letter fallback in `AlertDeadLetter`.
+- Sink delivery failures are observable by structured logs and do not fail core verify/recall API path.
 
 ## Error Contract
 

@@ -33,10 +33,10 @@ Reference model: 3 phases from provided supply-chain diagram.
 | Layer 1 digital integrity | Protected QR + on-chain checks | Implemented |
 | Layer 2 physical AI integrity | Optional adapter in backend (`AI_VERIFICATION_*`) | Adapter ready |
 | Aggregate decision | Backend merges QR, ledger, and AI adapter result | Implemented |
-| Fraud warning and alerting | Canonical taxonomy mapper + alert archive + regulator alert/report APIs + baseline report sink adapter (`logger`) | Implemented (baseline) |
+| Fraud warning and alerting | Canonical taxonomy mapper + alert archive + regulator alert/report APIs + sink delivery for `SCAN_REJECTED` and `RECALL_ALERT` (`logger|webhook`) with retry/backoff/dead-letter | Implemented |
 
 ## Gap Summary
 
 1. AI service itself is not bundled in this workspace. Adapter contract is ready.
-2. Automated counterfeit alert delivery pipeline (email/SIEM/case mgmt with retry/dead-letter) is not yet implemented.
+2. Advanced sink channels (email/SIEM/case mgmt vendor-specific adapters) are not yet implemented; current baseline supports logger/webhook contract.
 3. IPFS pinning automation is not yet integrated; CID update endpoint is available.

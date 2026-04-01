@@ -216,3 +216,44 @@ test("integration: ownership transfer ship then receive", async () => {
     assert.equal(receiveResult.transferStatus, "NONE");
     assert.equal(receiveResult.ownerMSP, "DistributorMSP");
 });
+
+test("integration: alert side effects are non-blocking when archive/sink fails", async () => {
+    const repository = createMockLedgerRepository();
+    const qrService = {
+        async verify() {
+            return {
+                token: "protected-token",
+                isAuthentic: true,
+                confidenceScore: 0.93,
+                decodedMeta: {
+                    dataHash: "a1b2c3d4",
+                },
+            };
+        },
+    };
+
+    const archiveRepository = {
+        async save() {
+            throw new Error("archive unavailable");
+        },
+    };
+
+    const deliveryService = {
+        async dispatchAlert() {
+            throw new Error("sink unavailable");
+        },
+    };
+
+    const service = new SupplyChainService(
+        repository,
+        qrService,
+        null,
+        archiveRepository,
+        deliveryService,
+    );
+
+    const result = await service.verifyProduct(Buffer.from("img"), "trace-non-blocking");
+
+    assert.equal(result.decision.accepted, true);
+    assert.equal(result.decision.code, "SCAN_ACCEPTED");
+});

@@ -213,3 +213,17 @@ Behavior:
 - `format=json`: returns `{ success: true, data: ... }` payload with summary + items.
 - `format=csv`: returns `text/csv` attachment.
 - Export metadata is published through baseline sink adapter (`logger` channel).
+
+## 7) Alert Sink Side Effects (P0-05)
+
+Trigger points:
+
+- `POST /verify` when decision is `SCAN_REJECTED`.
+- `POST /batches/:batchId/recall` when emitting `RECALL_ALERT`.
+
+Delivery behavior:
+
+- Canonical alert payload is archived first.
+- Sink dispatch uses idempotency key + retry/backoff policy.
+- If retries are exhausted, payload is moved to dead-letter storage.
+- Sink failures are logged and do not fail the core API response path.

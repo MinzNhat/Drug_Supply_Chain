@@ -125,6 +125,17 @@ const asPositiveInt = (value, fallback) => {
 };
 
 /**
+ * Normalize sink adapter type and fallback to logger when unsupported.
+ *
+ * @param {unknown} value - Raw sink type value.
+ * @returns {"logger" | "webhook"} Supported sink type.
+ */
+const asAlertSinkType = (value) => {
+    const normalized = asNonEmptyString(value, "logger").toLowerCase();
+    return normalized === "webhook" ? "webhook" : "logger";
+};
+
+/**
  * Normalize an optional string value and return fallback when empty.
  *
  * @param {unknown} value - Raw environment value.
@@ -367,6 +378,43 @@ export const config = {
         ),
         timeoutMs: asPositiveInt(process.env.AI_VERIFICATION_TIMEOUT_MS, 10000),
         failOpen: asBoolean(process.env.AI_VERIFICATION_FAIL_OPEN, true),
+    },
+
+    /**
+     * External alert sink delivery policy for canonical alert keys.
+     */
+    alertSink: {
+        enabled: asBoolean(process.env.ALERT_SINK_ENABLED, true),
+        type: asAlertSinkType(process.env.ALERT_SINK_TYPE),
+        retry: {
+            maxAttempts: asPositiveInt(
+                process.env.ALERT_SINK_RETRY_MAX_ATTEMPTS,
+                3,
+            ),
+            baseDelayMs: asPositiveInt(
+                process.env.ALERT_SINK_RETRY_BASE_DELAY_MS,
+                200,
+            ),
+            maxDelayMs: asPositiveInt(
+                process.env.ALERT_SINK_RETRY_MAX_DELAY_MS,
+                2000,
+            ),
+        },
+        webhook: {
+            url: asNonEmptyString(process.env.ALERT_SINK_WEBHOOK_URL, ""),
+            timeoutMs: asPositiveInt(
+                process.env.ALERT_SINK_WEBHOOK_TIMEOUT_MS,
+                5000,
+            ),
+            authHeader: asNonEmptyString(
+                process.env.ALERT_SINK_WEBHOOK_AUTH_HEADER,
+                "authorization",
+            ),
+            authToken: asNonEmptyString(
+                process.env.ALERT_SINK_WEBHOOK_AUTH_TOKEN,
+                "",
+            ),
+        },
     },
 
     /**

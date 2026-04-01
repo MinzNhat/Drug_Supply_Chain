@@ -5,6 +5,7 @@ import { authMiddleware } from "../../middleware/auth/auth.middleware.js";
 import { createAlertArchiveRepository } from "../../repositories/alert/alert-archive.repository.js";
 import { createLedgerRepository } from "../../repositories/ledger/create-ledger-repository.js";
 import { AiVerifierService } from "../../services/ai-verifier/ai-verifier.service.js";
+import { createAlertDeliveryService } from "../../services/alerts/alert-delivery.service.js";
 import { QrService } from "../../services/qr/qr.service.js";
 import { SupplyChainService } from "../../services/supply-chain/supply-chain.service.js";
 
@@ -21,6 +22,7 @@ export const createProductRoutes = () => {
     // Wire service dependencies once per router instance.
     const ledgerRepository = createLedgerRepository();
     const alertArchiveRepository = createAlertArchiveRepository();
+    const alertDeliveryService = createAlertDeliveryService();
     const qrService = new QrService();
     const aiVerifierService = new AiVerifierService();
     const supplyChainService = new SupplyChainService(
@@ -28,6 +30,7 @@ export const createProductRoutes = () => {
         qrService,
         aiVerifierService,
         alertArchiveRepository,
+        alertDeliveryService,
     );
     const controller = createProductController(supplyChainService);
 

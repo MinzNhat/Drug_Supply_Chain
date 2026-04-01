@@ -52,3 +52,12 @@ export const CHAINCODE_EVENT_TO_CANONICAL_ALERT_KEY = Object.freeze({
 export const CANONICAL_ALERT_TO_SINK_EVENT_ID = Object.freeze(
     Object.fromEntries(CANONICAL_ALERT_KEYS.map((key) => [key, `DATN_${key}`])),
 );
+
+/**
+ * Canonical alert keys that must be pushed to external sink channels.
+ */
+export const DELIVERABLE_CANONICAL_ALERT_KEYS = Object.freeze([
+    "SCAN_REJECTED",
+    "RECALL_ALERT",
+]);
+
