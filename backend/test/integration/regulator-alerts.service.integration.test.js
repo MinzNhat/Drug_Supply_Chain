@@ -3,12 +3,12 @@ import test from "node:test";
 
 process.env.MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017";
 process.env.MONGO_DB = process.env.MONGO_DB ?? "drug_guard_test";
-process.env.QR_SERVICE_URL = process.env.QR_SERVICE_URL ?? "http://localhost:8080";
+process.env.QR_SERVICE_URL =
+    process.env.QR_SERVICE_URL ?? "http://localhost:8080";
 process.env.JWT_SECRET = process.env.JWT_SECRET ?? "test-secret";
 
-const { RegulatorAlertsService } = await import(
-    "../../src/services/alerts/regulator-alerts.service.js"
-);
+const { RegulatorAlertsService } =
+    await import("../../src/services/alerts/regulator-alerts.service.js");
 
 test("integration: export json report publishes sink metadata", async () => {
     const calls = [];
@@ -123,7 +123,10 @@ test("integration: get alert by id returns 404 for unknown id", async () => {
     const service = new RegulatorAlertsService(repository, sinkAdapter);
 
     await assert.rejects(
-        () => service.getAlertById("65f0a84de9c0aa49309d9999", { role: "Regulator" }),
+        () =>
+            service.getAlertById("65f0a84de9c0aa49309d9999", {
+                role: "Regulator",
+            }),
         (error) => {
             assert.equal(error?.status, 404);
             assert.equal(error?.code, "ALERT_NOT_FOUND");

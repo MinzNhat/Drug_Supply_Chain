@@ -3,13 +3,13 @@ import test from "node:test";
 
 process.env.MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017";
 process.env.MONGO_DB = process.env.MONGO_DB ?? "drug_guard_test";
-process.env.QR_SERVICE_URL = process.env.QR_SERVICE_URL ?? "http://localhost:8080";
+process.env.QR_SERVICE_URL =
+    process.env.QR_SERVICE_URL ?? "http://localhost:8080";
 process.env.JWT_SECRET = process.env.JWT_SECRET ?? "test-secret";
 process.env.ALERT_SINK_ENABLED = "true";
 
-const { AlertDeliveryService } = await import(
-    "../../src/services/alerts/alert-delivery.service.js"
-);
+const { AlertDeliveryService } =
+    await import("../../src/services/alerts/alert-delivery.service.js");
 
 /**
  * Create in-memory repositories for alert delivery tests.
@@ -128,7 +128,9 @@ test("dispatchAlert delivers SCAN_REJECTED and marks state as delivered", async 
         },
     });
 
-    const result = await service.dispatchAlert(createAlertPayload("SCAN_REJECTED"));
+    const result = await service.dispatchAlert(
+        createAlertPayload("SCAN_REJECTED"),
+    );
 
     assert.equal(result.status, "delivered");
     assert.equal(publishCalls, 1);
@@ -158,7 +160,9 @@ test("dispatchAlert skips non-deliverable canonical key", async () => {
         },
     });
 
-    const result = await service.dispatchAlert(createAlertPayload("SCAN_ACCEPTED"));
+    const result = await service.dispatchAlert(
+        createAlertPayload("SCAN_ACCEPTED"),
+    );
 
     assert.equal(result.status, "skipped");
     assert.equal(result.reason, "not_deliverable");
@@ -187,7 +191,9 @@ test("dispatchAlert retries and writes dead-letter after max attempts", async ()
         },
     });
 
-    const result = await service.dispatchAlert(createAlertPayload("RECALL_ALERT"));
+    const result = await service.dispatchAlert(
+        createAlertPayload("RECALL_ALERT"),
+    );
 
     assert.equal(result.status, "dead_letter");
     assert.equal(publishCalls, 2);

@@ -6,11 +6,11 @@ Define how secrets are handled across `dev`, `staging`, and `prod` for DATN serv
 
 ## Secret Matrix
 
-| Secret | Service | Dev Source | Staging Source | Prod Source | Rotation Owner |
-| --- | --- | --- | --- | --- | --- |
-| `DATN_BACKEND_JWT_SECRET` | Backend | Auto-generated per `scripts/run-all.sh` run (or local `.env`) | CI/CD secret store injects env or file | Secret manager injects env/file at deploy time | Backend platform owner |
-| `DATN_QR_HMAC_SECRET` | Protected QR | Auto-generated per `scripts/run-all.sh` run (or local `.env`) | CI/CD secret store injects env or file | Secret manager injects env/file at deploy time | Protected-QR owner |
-| Fabric identity keys/certs | Backend gateway | Local mounted test-network artifacts | Environment-specific secure artifact store | HSM/KMS-backed identity store policy target | Blockchain platform owner |
+| Secret                     | Service         | Dev Source                                                    | Staging Source                             | Prod Source                                    | Rotation Owner            |
+| -------------------------- | --------------- | ------------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------- | ------------------------- |
+| `DATN_BACKEND_JWT_SECRET`  | Backend         | Auto-generated per `scripts/run-all.sh` run (or local `.env`) | CI/CD secret store injects env or file     | Secret manager injects env/file at deploy time | Backend platform owner    |
+| `DATN_QR_HMAC_SECRET`      | Protected QR    | Auto-generated per `scripts/run-all.sh` run (or local `.env`) | CI/CD secret store injects env or file     | Secret manager injects env/file at deploy time | Protected-QR owner        |
+| Fabric identity keys/certs | Backend gateway | Local mounted test-network artifacts                          | Environment-specific secure artifact store | HSM/KMS-backed identity store policy target    | Blockchain platform owner |
 
 ## Loading Mechanism
 

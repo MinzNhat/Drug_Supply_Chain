@@ -4,20 +4,18 @@ import test from "node:test";
 
 process.env.MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017";
 process.env.MONGO_DB = process.env.MONGO_DB ?? "drug_guard_test";
-process.env.QR_SERVICE_URL = process.env.QR_SERVICE_URL ?? "http://localhost:8080";
+process.env.QR_SERVICE_URL =
+    process.env.QR_SERVICE_URL ?? "http://localhost:8080";
 process.env.JWT_SECRET = process.env.JWT_SECRET ?? "test-secret";
 
 const express = (await import("express")).default;
 const jwt = (await import("jsonwebtoken")).default;
-const { errorHandler } = await import(
-    "../../src/middleware/error/error-handler.js"
-);
-const { createRegulatorRoutes } = await import(
-    "../../src/routes/regulator/regulator.routes.js"
-);
-const { requestContextMiddleware } = await import(
-    "../../src/middleware/request-context/request-context.middleware.js"
-);
+const { errorHandler } =
+    await import("../../src/middleware/error/error-handler.js");
+const { createRegulatorRoutes } =
+    await import("../../src/routes/regulator/regulator.routes.js");
+const { requestContextMiddleware } =
+    await import("../../src/middleware/request-context/request-context.middleware.js");
 const { config } = await import("../../src/config/index.js");
 
 /**
@@ -106,11 +104,14 @@ test("integration: regulator can list archived alerts", async (t) => {
     t.after(() => server.close());
 
     const token = signToken("Regulator", "RegulatorMSP");
-    const response = await fetch(`${server.baseUrl}/api/v1/regulator/alerts?page=1`, {
-        headers: {
-            Authorization: `Bearer ${token}`,
+    const response = await fetch(
+        `${server.baseUrl}/api/v1/regulator/alerts?page=1`,
+        {
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
         },
-    });
+    );
 
     assert.equal(response.status, 200);
     const body = await response.json();

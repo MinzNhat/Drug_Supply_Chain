@@ -2,42 +2,42 @@
 
 ## Backend (`backend/.env`)
 
-| Variable                             | Required | Example                 | Description                                    |
-| ------------------------------------ | -------- | ----------------------- | ---------------------------------------------- |
-| `PORT`                               | Yes      | `8090`                  | Backend HTTP port.                             |
-| `MONGO_URI`                          | Yes      | `mongodb://mongo:27017` | Mongo connection for backend metadata/indexes. |
-| `MONGO_DB`                           | Yes      | `drug_guard`            | Backend database name.                         |
-| `QR_SERVICE_URL`                     | Yes      | `http://localhost:8080` | Protected QR API base URL.                     |
-| `JWT_SECRET`                         | Yes      | `set-via-secret-manager` | JWT signing key (or use `JWT_SECRET_FILE`).    |
-| `JWT_SECRET_FILE`                    | No       | `/run/secrets/backend_jwt_secret` | File path containing JWT secret. |
-| `JWT_EXPIRES_IN`                     | No       | `8h`                    | JWT expiration.                                |
-| `LOG_LEVEL`                          | No       | `info`                  | Logging level.                                 |
-| `REQUEST_TIMEOUT_MS`                 | No       | `10000`                 | Inter-service HTTP timeout.                    |
-| `AI_VERIFICATION_ENABLED`            | No       | `false`                 | Enables optional packaging AI verification.    |
-| `AI_VERIFICATION_URL`                | No       | `http://localhost:8700` | AI verification API base URL.                  |
-| `AI_VERIFICATION_TIMEOUT_MS`         | No       | `10000`                 | Timeout for AI verification calls.             |
-| `AI_VERIFICATION_FAIL_OPEN`          | No       | `true`                  | Allow verification to continue if AI is down.  |
-| `ALERT_SINK_ENABLED`                 | No       | `true`                  | Enable canonical alert sink delivery workflow. |
-| `ALERT_SINK_TYPE`                    | No       | `logger`                | Sink adapter type (`logger|webhook`).          |
-| `ALERT_SINK_RETRY_MAX_ATTEMPTS`      | No       | `3`                     | Max retry attempts for sink delivery.          |
-| `ALERT_SINK_RETRY_BASE_DELAY_MS`     | No       | `200`                   | Retry backoff base delay (ms).                 |
-| `ALERT_SINK_RETRY_MAX_DELAY_MS`      | No       | `2000`                  | Retry backoff upper bound (ms).                |
-| `ALERT_SINK_WEBHOOK_URL`             | No       | `https://sink.example/alerts` | Webhook endpoint for sink adapter.       |
-| `ALERT_SINK_WEBHOOK_TIMEOUT_MS`      | No       | `5000`                  | Webhook request timeout.                        |
-| `ALERT_SINK_WEBHOOK_AUTH_HEADER`     | No       | `authorization`         | Header name carrying webhook auth token.       |
-| `ALERT_SINK_WEBHOOK_AUTH_TOKEN`      | No       | `Bearer <token>`        | Webhook auth token value.                       |
-| `FABRIC_ENABLED`                     | Yes      | `true`                  | Enables Fabric Gateway integration.            |
-| `FABRIC_PROFILE`                     | No       | `local`                 | Fabric runtime profile (`local|staging|prod`). |
+| Variable                             | Required | Example                                               | Description                                          |
+| ------------------------------------ | -------- | ----------------------------------------------------- | ---------------------------------------------------- |
+| `PORT`                               | Yes      | `8090`                                                | Backend HTTP port.                                   |
+| `MONGO_URI`                          | Yes      | `mongodb://mongo:27017`                               | Mongo connection for backend metadata/indexes.       |
+| `MONGO_DB`                           | Yes      | `drug_guard`                                          | Backend database name.                               |
+| `QR_SERVICE_URL`                     | Yes      | `http://localhost:8080`                               | Protected QR API base URL.                           |
+| `JWT_SECRET`                         | Yes      | `set-via-secret-manager`                              | JWT signing key (or use `JWT_SECRET_FILE`).          |
+| `JWT_SECRET_FILE`                    | No       | `/run/secrets/backend_jwt_secret`                     | File path containing JWT secret.                     |
+| `JWT_EXPIRES_IN`                     | No       | `8h`                                                  | JWT expiration.                                      |
+| `LOG_LEVEL`                          | No       | `info`                                                | Logging level.                                       |
+| `REQUEST_TIMEOUT_MS`                 | No       | `10000`                                               | Inter-service HTTP timeout.                          |
+| `AI_VERIFICATION_ENABLED`            | No       | `false`                                               | Enables optional packaging AI verification.          |
+| `AI_VERIFICATION_URL`                | No       | `http://localhost:8700`                               | AI verification API base URL.                        |
+| `AI_VERIFICATION_TIMEOUT_MS`         | No       | `10000`                                               | Timeout for AI verification calls.                   |
+| `AI_VERIFICATION_FAIL_OPEN`          | No       | `true`                                                | Allow verification to continue if AI is down.        |
+| `ALERT_SINK_ENABLED`                 | No       | `true`                                                | Enable canonical alert sink delivery workflow.       |
+| `ALERT_SINK_TYPE`                    | No       | `logger`                                              | Sink adapter type (`logger\|webhook`).               |
+| `ALERT_SINK_RETRY_MAX_ATTEMPTS`      | No       | `3`                                                   | Max retry attempts for sink delivery.                |
+| `ALERT_SINK_RETRY_BASE_DELAY_MS`     | No       | `200`                                                 | Retry backoff base delay (ms).                       |
+| `ALERT_SINK_RETRY_MAX_DELAY_MS`      | No       | `2000`                                                | Retry backoff upper bound (ms).                      |
+| `ALERT_SINK_WEBHOOK_URL`             | No       | `https://sink.example/alerts`                         | Webhook endpoint for sink adapter.                   |
+| `ALERT_SINK_WEBHOOK_TIMEOUT_MS`      | No       | `5000`                                                | Webhook request timeout.                             |
+| `ALERT_SINK_WEBHOOK_AUTH_HEADER`     | No       | `authorization`                                       | Header name carrying webhook auth token.             |
+| `ALERT_SINK_WEBHOOK_AUTH_TOKEN`      | No       | `Bearer <token>`                                      | Webhook auth token value.                            |
+| `FABRIC_ENABLED`                     | Yes      | `true`                                                | Enables Fabric Gateway integration.                  |
+| `FABRIC_PROFILE`                     | No       | `local`                                               | Fabric runtime profile (`local\|staging\|prod`).     |
 | `FABRIC_PROFILE_FILE`                | No       | `backend/config/fabric-profiles/staging.example.json` | JSON profile file for org endpoints and credentials. |
-| `FABRIC_STRICT_CREDENTIALS`          | No       | `false` (local), `true` (staging/prod) | Fail startup on invalid/missing Fabric material. |
-| `FABRIC_CHANNEL_NAME`                | Yes      | `mychannel`             | Fabric channel name.                           |
-| `FABRIC_CHAINCODE_NAME`              | Yes      | `drugtracker`           | Chaincode/contract name.                       |
-| `FABRIC_EVALUATE_TIMEOUT_MS`         | No       | `5000`                  | Evaluate call deadline.                        |
-| `FABRIC_SUBMIT_TIMEOUT_MS`           | No       | `15000`                 | Submit call deadline.                          |
-| `FABRIC_COMMIT_STATUS_TIMEOUT_MS`    | No       | `20000`                 | Commit status deadline.                        |
-| `FABRIC_EVALUATE_RETRY_MAX_ATTEMPTS` | No       | `3`                     | Evaluate retry attempts.                       |
-| `FABRIC_SUBMIT_RETRY_MAX_ATTEMPTS`   | No       | `1`                     | Submit retry attempts.                         |
-| `FABRIC_PUBLIC_SCAN_ROLE`            | No       | `Regulator`             | Role identity for public scan ledger calls.    |
+| `FABRIC_STRICT_CREDENTIALS`          | No       | `false` (local), `true` (staging/prod)                | Fail startup on invalid/missing Fabric material.     |
+| `FABRIC_CHANNEL_NAME`                | Yes      | `mychannel`                                           | Fabric channel name.                                 |
+| `FABRIC_CHAINCODE_NAME`              | Yes      | `drugtracker`                                         | Chaincode/contract name.                             |
+| `FABRIC_EVALUATE_TIMEOUT_MS`         | No       | `5000`                                                | Evaluate call deadline.                              |
+| `FABRIC_SUBMIT_TIMEOUT_MS`           | No       | `15000`                                               | Submit call deadline.                                |
+| `FABRIC_COMMIT_STATUS_TIMEOUT_MS`    | No       | `20000`                                               | Commit status deadline.                              |
+| `FABRIC_EVALUATE_RETRY_MAX_ATTEMPTS` | No       | `3`                                                   | Evaluate retry attempts.                             |
+| `FABRIC_SUBMIT_RETRY_MAX_ATTEMPTS`   | No       | `1`                                                   | Submit retry attempts.                               |
+| `FABRIC_PUBLIC_SCAN_ROLE`            | No       | `Regulator`                                           | Role identity for public scan ledger calls.          |
 
 Role-bound identity material:
 
@@ -95,16 +95,16 @@ Example for Fabric test-network identities:
 
 ## Protected QR (`protected-qr/.env`)
 
-| Variable             | Required | Example                 |
-| -------------------- | -------- | ----------------------- |
-| `PORT`               | Yes      | `8080`                  |
-| `MONGO_URI`          | Yes      | `mongodb://mongo:27017` |
-| `MONGO_DB`           | Yes      | `protected_qr`          |
-| `PYTHON_SERVICE_URL` | Yes      | `http://localhost:8000` |
-| `HMAC_SECRET`        | Yes      | `set-via-secret-manager` |
+| Variable             | Required | Example                       |
+| -------------------- | -------- | ----------------------------- |
+| `PORT`               | Yes      | `8080`                        |
+| `MONGO_URI`          | Yes      | `mongodb://mongo:27017`       |
+| `MONGO_DB`           | Yes      | `protected_qr`                |
+| `PYTHON_SERVICE_URL` | Yes      | `http://localhost:8000`       |
+| `HMAC_SECRET`        | Yes      | `set-via-secret-manager`      |
 | `HMAC_SECRET_FILE`   | No       | `/run/secrets/qr_hmac_secret` |
-| `LOG_LEVEL`          | No       | `info`                  |
-| `REQUEST_TIMEOUT_MS` | No       | `10000`                 |
+| `LOG_LEVEL`          | No       | `info`                        |
+| `REQUEST_TIMEOUT_MS` | No       | `10000`                       |
 
 ## Blockchain Defaults (`blockchain/.env.example`)
 

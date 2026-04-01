@@ -1,18 +1,18 @@
 import crypto from "crypto";
 import { config } from "../../config/index.js";
 import { HttpException } from "../../utils/http-exception/http-exception.js";
+import { logger } from "../../utils/logger/logger.js";
 import { normalizeRole, toCanonicalMspForRole } from "../../utils/msp/msp.js";
+import {
+    emitCanonicalAlert,
+    emitDecisionAlert,
+} from "../alerts/alert-taxonomy.mapper.js";
 import {
     aggregateSupplyHeatmap,
     createBatchGeoEvent,
     listBatchSnapshots,
     queryBatchTimelineEvents,
 } from "./supply-chain.geo.js";
-import {
-    emitCanonicalAlert,
-    emitDecisionAlert,
-} from "../alerts/alert-taxonomy.mapper.js";
-import { logger } from "../../utils/logger/logger.js";
 
 /**
  * Convert number-like input to a fixed-width hexadecimal string.
@@ -122,7 +122,9 @@ export class SupplyChainService {
                 batchID: alertPayload?.batchID ?? "",
                 traceId: alertPayload?.traceId ?? "",
                 error:
-                    error instanceof Error ? error.message : "Unknown archive error",
+                    error instanceof Error
+                        ? error.message
+                        : "Unknown archive error",
             });
         }
     }
@@ -137,16 +139,20 @@ export class SupplyChainService {
             return;
         }
 
-        void this.alertDeliveryService.dispatchAlert(alertPayload).catch((error) => {
-            logger.error({
-                message: "canonical-alert-dispatch-unhandled-error",
-                canonicalKey: alertPayload?.canonicalKey ?? "",
-                batchID: alertPayload?.batchID ?? "",
-                traceId: alertPayload?.traceId ?? "",
-                error:
-                    error instanceof Error ? error.message : "Unknown dispatch error",
+        void this.alertDeliveryService
+            .dispatchAlert(alertPayload)
+            .catch((error) => {
+                logger.error({
+                    message: "canonical-alert-dispatch-unhandled-error",
+                    canonicalKey: alertPayload?.canonicalKey ?? "",
+                    batchID: alertPayload?.batchID ?? "",
+                    traceId: alertPayload?.traceId ?? "",
+                    error:
+                        error instanceof Error
+                            ? error.message
+                            : "Unknown dispatch error",
+                });
             });
-        });
     }
 
     /**
@@ -406,7 +412,10 @@ export class SupplyChainService {
      * Recall a batch immediately.
      */
     async emergencyRecall(batchID, actor) {
-        const batch = await this.ledgerRepository.emergencyRecall(actor, batchID);
+        const batch = await this.ledgerRepository.emergencyRecall(
+            actor,
+            batchID,
+        );
 
         const recallAlert = emitCanonicalAlert("RECALL_ALERT", {
             sourceKey: "EmergencyRecall",

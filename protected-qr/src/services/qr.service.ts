@@ -125,7 +125,8 @@ export class QrService {
         const token =
             rawToken && this.isTokenSignatureValid(rawToken) ? rawToken : null;
         const confidenceScore = Number(pythonRes.data?.confidence_score ?? 0);
-        const isAuthentic = Boolean(pythonRes.data?.is_authentic) && Boolean(token);
+        const isAuthentic =
+            Boolean(pythonRes.data?.is_authentic) && Boolean(token);
         const decodedMeta = token ? this.decodeToken(token) : null;
 
         // Store verification results for audit trails.

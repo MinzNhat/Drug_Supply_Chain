@@ -522,7 +522,9 @@ const run = async () => {
         if (REQUIRE_REAL_SCAN_FIXTURE) {
             logFail(skipMessage);
         } else {
-            logPass(`${skipMessage}; set REQUIRE_REAL_SCAN_FIXTURE=true to enforce`);
+            logPass(
+                `${skipMessage}; set REQUIRE_REAL_SCAN_FIXTURE=true to enforce`,
+            );
         }
     }
 

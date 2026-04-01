@@ -1,176 +1,176 @@
 services:
-    mongo:
-        image: mongo:6
-        container_name: drug-guard-mongo
-        ports:
-            - "27017:27017"
-        volumes:
-            - mongo-data:/data/db
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    'mongosh --quiet --eval "db.adminCommand(''ping'').ok" || exit 1',
-                ]
-            interval: 5s
-            timeout: 5s
-            retries: 20
-        networks:
-            - app-network
+  mongo:
+    image: mongo:6
+    container_name: drug-guard-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mongosh --quiet --eval "db.adminCommand(''ping'').ok" || exit 1',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app-network
 
-    qr-python-core:
-        build:
-            context: ./protected-qr
-            dockerfile: docker/Dockerfile.python
-        container_name: qr-python-core
-        ports:
-            - "8000:8000"
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    'python -c "import urllib.request; urllib.request.urlopen(''http://127.0.0.1:8000/health'', timeout=2)"',
-                ]
-            interval: 5s
-            timeout: 5s
-            retries: 20
-        networks:
-            - app-network
+  qr-python-core:
+    build:
+      context: ./protected-qr
+      dockerfile: docker/Dockerfile.python
+    container_name: qr-python-core
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://127.0.0.1:8000/health'', timeout=2)"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app-network
 
-    qr-service:
-        build:
-            context: ./protected-qr
-            dockerfile: docker/Dockerfile.node
-        container_name: qr-service
-        ports:
-            - "8080:8080"
-        environment:
-            PORT: 8080
-            MONGO_URI: mongodb://mongo:27017
-            MONGO_DB: protected_qr
-            PYTHON_SERVICE_URL: http://qr-python-core:8000
-            HMAC_SECRET: ${DATN_QR_HMAC_SECRET:-}
-            HMAC_SECRET_FILE: ${DATN_QR_HMAC_SECRET_FILE:-}
-            LOG_LEVEL: info
-            REQUEST_TIMEOUT_MS: 10000
-        depends_on:
-            mongo:
-                condition: service_healthy
-            qr-python-core:
-                condition: service_healthy
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    'node -e "require(''http'').get(''http://127.0.0.1:8080/health'',(r)=>process.exit(r.statusCode===200?0:1)).on(''error'',()=>process.exit(1))"',
-                ]
-            interval: 5s
-            timeout: 5s
-            retries: 20
-        networks:
-            - app-network
+  qr-service:
+    build:
+      context: ./protected-qr
+      dockerfile: docker/Dockerfile.node
+    container_name: qr-service
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: protected_qr
+      PYTHON_SERVICE_URL: http://qr-python-core:8000
+      HMAC_SECRET: ${DATN_QR_HMAC_SECRET:-}
+      HMAC_SECRET_FILE: ${DATN_QR_HMAC_SECRET_FILE:-}
+      LOG_LEVEL: info
+      REQUEST_TIMEOUT_MS: 10000
+    depends_on:
+      mongo:
+        condition: service_healthy
+      qr-python-core:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "require(''http'').get(''http://127.0.0.1:8080/health'',(r)=>process.exit(r.statusCode===200?0:1)).on(''error'',()=>process.exit(1))"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app-network
 
-    backend:
-        build:
-            context: .
-            dockerfile: backend/Dockerfile
-        container_name: drug-guard-backend
-        ports:
-            - "8090:8090"
-        environment:
-            PORT: 8090
-            MONGO_URI: mongodb://mongo:27017
-            MONGO_DB: drug_guard
-            QR_SERVICE_URL: http://qr-service:8080
-            JWT_SECRET: ${DATN_BACKEND_JWT_SECRET:-}
-            JWT_SECRET_FILE: ${DATN_BACKEND_JWT_SECRET_FILE:-}
-            JWT_EXPIRES_IN: 8h
-            LOG_LEVEL: info
-            REQUEST_TIMEOUT_MS: 10000
-            ALERT_SINK_ENABLED: true
-            ALERT_SINK_TYPE: logger
-            ALERT_SINK_RETRY_MAX_ATTEMPTS: 3
-            ALERT_SINK_RETRY_BASE_DELAY_MS: 200
-            ALERT_SINK_RETRY_MAX_DELAY_MS: 2000
-            ALERT_SINK_WEBHOOK_URL: ${DATN_ALERT_SINK_WEBHOOK_URL:-}
-            ALERT_SINK_WEBHOOK_TIMEOUT_MS: 5000
-            ALERT_SINK_WEBHOOK_AUTH_HEADER: authorization
-            ALERT_SINK_WEBHOOK_AUTH_TOKEN: ${DATN_ALERT_SINK_WEBHOOK_AUTH_TOKEN:-}
-            FABRIC_ENABLED: true
-            FABRIC_PROFILE: local
-            FABRIC_PROFILE_FILE: ${DATN_BACKEND_FABRIC_PROFILE_FILE:-}
-            FABRIC_STRICT_CREDENTIALS: false
-            FABRIC_CHANNEL_NAME: mychannel
-            FABRIC_CHAINCODE_NAME: drugtracker
-            FABRIC_EVALUATE_TIMEOUT_MS: 5000
-            FABRIC_SUBMIT_TIMEOUT_MS: 15000
-            FABRIC_COMMIT_STATUS_TIMEOUT_MS: 20000
-            FABRIC_EVALUATE_RETRY_MAX_ATTEMPTS: 3
-            FABRIC_EVALUATE_RETRY_BASE_DELAY_MS: 200
-            FABRIC_EVALUATE_RETRY_MAX_DELAY_MS: 1000
-            FABRIC_SUBMIT_RETRY_MAX_ATTEMPTS: 1
-            FABRIC_SUBMIT_RETRY_BASE_DELAY_MS: 250
-            FABRIC_SUBMIT_RETRY_MAX_DELAY_MS: 1200
-            FABRIC_PUBLIC_SCAN_ROLE: Regulator
-            FABRIC_MANUFACTURER_MSP_ID: Org2MSP
-            FABRIC_MANUFACTURER_PEER_ENDPOINT: host.docker.internal:9051
-            FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.org2.example.com
-            FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
-            FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
-            FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore
-            FABRIC_DISTRIBUTOR_MSP_ID: Org3MSP
-            FABRIC_DISTRIBUTOR_PEER_ENDPOINT: host.docker.internal:11051
-            FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.org3.example.com
-            FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt
-            FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem
-            FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore
-            FABRIC_REGULATOR_MSP_ID: Org1MSP
-            FABRIC_REGULATOR_PEER_ENDPOINT: host.docker.internal:7051
-            FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.org1.example.com
-            FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-            FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
-            FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore
-            AI_VERIFICATION_ENABLED: false
-        depends_on:
-            mongo:
-                condition: service_healthy
-            qr-service:
-                condition: service_healthy
-        extra_hosts:
-            - "host.docker.internal:host-gateway"
-        volumes:
-            - ./blockchain/test-network/organizations:/fabric/organizations:ro
-        healthcheck:
-            test:
-                [
-                    "CMD-SHELL",
-                    'node -e "require(''http'').get(''http://127.0.0.1:8090/health'',(r)=>process.exit(r.statusCode===200?0:1)).on(''error'',()=>process.exit(1))"',
-                ]
-            interval: 5s
-            timeout: 5s
-            retries: 25
-        networks:
-            - app-network
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: drug-guard-backend
+    ports:
+      - "8090:8090"
+    environment:
+      PORT: 8090
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: drug_guard
+      QR_SERVICE_URL: http://qr-service:8080
+      JWT_SECRET: ${DATN_BACKEND_JWT_SECRET:-}
+      JWT_SECRET_FILE: ${DATN_BACKEND_JWT_SECRET_FILE:-}
+      JWT_EXPIRES_IN: 8h
+      LOG_LEVEL: info
+      REQUEST_TIMEOUT_MS: 10000
+      ALERT_SINK_ENABLED: true
+      ALERT_SINK_TYPE: logger
+      ALERT_SINK_RETRY_MAX_ATTEMPTS: 3
+      ALERT_SINK_RETRY_BASE_DELAY_MS: 200
+      ALERT_SINK_RETRY_MAX_DELAY_MS: 2000
+      ALERT_SINK_WEBHOOK_URL: ${DATN_ALERT_SINK_WEBHOOK_URL:-}
+      ALERT_SINK_WEBHOOK_TIMEOUT_MS: 5000
+      ALERT_SINK_WEBHOOK_AUTH_HEADER: authorization
+      ALERT_SINK_WEBHOOK_AUTH_TOKEN: ${DATN_ALERT_SINK_WEBHOOK_AUTH_TOKEN:-}
+      FABRIC_ENABLED: true
+      FABRIC_PROFILE: local
+      FABRIC_PROFILE_FILE: ${DATN_BACKEND_FABRIC_PROFILE_FILE:-}
+      FABRIC_STRICT_CREDENTIALS: false
+      FABRIC_CHANNEL_NAME: mychannel
+      FABRIC_CHAINCODE_NAME: drugtracker
+      FABRIC_EVALUATE_TIMEOUT_MS: 5000
+      FABRIC_SUBMIT_TIMEOUT_MS: 15000
+      FABRIC_COMMIT_STATUS_TIMEOUT_MS: 20000
+      FABRIC_EVALUATE_RETRY_MAX_ATTEMPTS: 3
+      FABRIC_EVALUATE_RETRY_BASE_DELAY_MS: 200
+      FABRIC_EVALUATE_RETRY_MAX_DELAY_MS: 1000
+      FABRIC_SUBMIT_RETRY_MAX_ATTEMPTS: 1
+      FABRIC_SUBMIT_RETRY_BASE_DELAY_MS: 250
+      FABRIC_SUBMIT_RETRY_MAX_DELAY_MS: 1200
+      FABRIC_PUBLIC_SCAN_ROLE: Regulator
+      FABRIC_MANUFACTURER_MSP_ID: Org2MSP
+      FABRIC_MANUFACTURER_PEER_ENDPOINT: host.docker.internal:9051
+      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.org2.example.com
+      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
+      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
+      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore
+      FABRIC_DISTRIBUTOR_MSP_ID: Org3MSP
+      FABRIC_DISTRIBUTOR_PEER_ENDPOINT: host.docker.internal:11051
+      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.org3.example.com
+      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt
+      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem
+      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore
+      FABRIC_REGULATOR_MSP_ID: Org1MSP
+      FABRIC_REGULATOR_PEER_ENDPOINT: host.docker.internal:7051
+      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.org1.example.com
+      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
+      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
+      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore
+      AI_VERIFICATION_ENABLED: false
+    depends_on:
+      mongo:
+        condition: service_healthy
+      qr-service:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./blockchain/test-network/organizations:/fabric/organizations:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "require(''http'').get(''http://127.0.0.1:8090/health'',(r)=>process.exit(r.statusCode===200?0:1)).on(''error'',()=>process.exit(1))"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 25
+    networks:
+      - app-network
 
-    e2e-runner:
-        build:
-            context: .
-            dockerfile: backend/Dockerfile
-        command: ["node", "scripts/backend/e2e-runtime.mjs"]
-        environment:
-            BASE_URL: http://backend:8090
-            E2E_TIMEOUT_MS: 30000
-        depends_on:
-            backend:
-                condition: service_healthy
-        networks:
-            - app-network
-        profiles:
-            - e2e
+  e2e-runner:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: ["node", "scripts/backend/e2e-runtime.mjs"]
+    environment:
+      BASE_URL: http://backend:8090
+      E2E_TIMEOUT_MS: 30000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+    profiles:
+      - e2e
 
 volumes:
-    mongo-data:
+  mongo-data:
 
 networks:
-    app-network:
-        driver: bridge
+  app-network:
+    driver: bridge

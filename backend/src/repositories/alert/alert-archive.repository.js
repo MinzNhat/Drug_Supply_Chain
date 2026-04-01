@@ -123,7 +123,10 @@ export class AlertArchiveRepository {
      */
     async list(filters = {}) {
         const page = Math.max(1, Number(filters.page ?? 1));
-        const pageSize = Math.min(200, Math.max(1, Number(filters.pageSize ?? 20)));
+        const pageSize = Math.min(
+            200,
+            Math.max(1, Number(filters.pageSize ?? 20)),
+        );
         const findQuery = toFindQuery(filters);
 
         const [total, rows] = await Promise.all([
@@ -166,7 +169,10 @@ export class AlertArchiveRepository {
      * @returns {Promise<Array<Record<string, unknown>>>} Alert DTO list.
      */
     async listForExport(filters = {}, limit = 1000) {
-        const cappedLimit = Math.min(10_000, Math.max(1, Number(limit) || 1000));
+        const cappedLimit = Math.min(
+            10_000,
+            Math.max(1, Number(limit) || 1000),
+        );
         const rows = await AlertArchive.find(toFindQuery(filters))
             .sort({ occurredAt: -1, _id: -1 })
             .limit(cappedLimit)

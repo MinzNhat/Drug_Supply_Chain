@@ -12,8 +12,14 @@ import {
  */
 
 test("resolveCanonicalAlertFromDecision maps backend decision keys", () => {
-    assert.equal(resolveCanonicalAlertFromDecision("SCAN_ACCEPTED"), "SCAN_ACCEPTED");
-    assert.equal(resolveCanonicalAlertFromDecision("SCAN_REJECTED"), "SCAN_REJECTED");
+    assert.equal(
+        resolveCanonicalAlertFromDecision("SCAN_ACCEPTED"),
+        "SCAN_ACCEPTED",
+    );
+    assert.equal(
+        resolveCanonicalAlertFromDecision("SCAN_REJECTED"),
+        "SCAN_REJECTED",
+    );
     assert.equal(resolveCanonicalAlertFromDecision("UNKNOWN"), "");
 });
 

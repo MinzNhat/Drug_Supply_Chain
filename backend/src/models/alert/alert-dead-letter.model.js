@@ -7,7 +7,12 @@ const { Schema } = mongoose;
  */
 const alertDeadLetterSchema = new Schema(
     {
-        idempotencyKey: { type: String, required: true, unique: true, index: true },
+        idempotencyKey: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
+        },
         canonicalKey: { type: String, required: true, index: true },
         sinkEventId: { type: String, required: true, index: true },
         sinkChannel: { type: String, required: true, index: true },

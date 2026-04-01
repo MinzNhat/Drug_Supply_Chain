@@ -92,10 +92,10 @@ Example conversion guide:
 
 ```json
 {
-    "data_hash": "a1b2c3d4",
-    "metadata_series": "1234567890abcdef",
-    "metadata_issued": "0011223344556677",
-    "metadata_expiry": "8899aabbccddeeff"
+  "data_hash": "a1b2c3d4",
+  "metadata_series": "1234567890abcdef",
+  "metadata_issued": "0011223344556677",
+  "metadata_expiry": "8899aabbccddeeff"
 }
 ```
 
@@ -109,11 +109,11 @@ Success response:
 
 ```json
 {
-    "success": true,
-    "data": {
-        "token": "base64url.payload.hmac",
-        "qr_image_base64": "iVBORw0..."
-    }
+  "success": true,
+  "data": {
+    "token": "base64url.payload.hmac",
+    "qr_image_base64": "iVBORw0..."
+  }
 }
 ```
 
@@ -121,15 +121,15 @@ Verification response:
 
 ```json
 {
-    "token": "base64url.payload.hmac",
-    "is_authentic": true,
-    "confidence_score": 0.85,
-    "decoded_meta": {
-        "data_hash": "a1b2c3d4",
-        "metadata_series": "1234567890abcdef",
-        "metadata_issued": "0011223344556677",
-        "metadata_expiry": "8899aabbccddeeff"
-    }
+  "token": "base64url.payload.hmac",
+  "is_authentic": true,
+  "confidence_score": 0.85,
+  "decoded_meta": {
+    "data_hash": "a1b2c3d4",
+    "metadata_series": "1234567890abcdef",
+    "metadata_issued": "0011223344556677",
+    "metadata_expiry": "8899aabbccddeeff"
+  }
 }
 ```
 
@@ -137,17 +137,17 @@ Error response:
 
 ```json
 {
-    "success": false,
-    "error": {
-        "code": "BAD_REQUEST",
-        "message": "Invalid request body",
-        "trace_id": "4f838f6f-5a6e-4f9d-9f73-7c8152f0249d",
-        "details": {
-            "errors": {
-                "data_hash": ["Required"]
-            }
-        }
+  "success": false,
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "Invalid request body",
+    "trace_id": "4f838f6f-5a6e-4f9d-9f73-7c8152f0249d",
+    "details": {
+      "errors": {
+        "data_hash": ["Required"]
+      }
     }
+  }
 }
 ```
 
@@ -235,16 +235,16 @@ curl -X POST http://localhost:8080/api/v1/qr/verify \
 
 See [.env.example](.env.example).
 
-| Name                 | Required | Description                           |
-| -------------------- | -------- | ------------------------------------- |
-| `PORT`               | Yes      | API HTTP port.                        |
-| `MONGO_URI`          | Yes      | MongoDB connection string.            |
-| `MONGO_DB`           | Yes      | MongoDB database name.                |
-| `PYTHON_SERVICE_URL` | Yes      | Base URL for the Python core service. |
+| Name                 | Required | Description                                                |
+| -------------------- | -------- | ---------------------------------------------------------- |
+| `PORT`               | Yes      | API HTTP port.                                             |
+| `MONGO_URI`          | Yes      | MongoDB connection string.                                 |
+| `MONGO_DB`           | Yes      | MongoDB database name.                                     |
+| `PYTHON_SERVICE_URL` | Yes      | Base URL for the Python core service.                      |
 | `HMAC_SECRET`        | Yes      | HMAC secret for token signing (or use `HMAC_SECRET_FILE`). |
-| `HMAC_SECRET_FILE`   | No       | File path containing HMAC secret.     |
-| `LOG_LEVEL`          | No       | Log level for structured output.      |
-| `REQUEST_TIMEOUT_MS` | No       | Timeout for Python core requests.     |
+| `HMAC_SECRET_FILE`   | No       | File path containing HMAC secret.                          |
+| `LOG_LEVEL`          | No       | Log level for structured output.                           |
+| `REQUEST_TIMEOUT_MS` | No       | Timeout for Python core requests.                          |
 
 ## Operational Notes
 

@@ -21,7 +21,12 @@ const alertDeliveryAttemptSchema = new Schema(
  */
 const alertDeliverySchema = new Schema(
     {
-        idempotencyKey: { type: String, required: true, unique: true, index: true },
+        idempotencyKey: {
+            type: String,
+            required: true,
+            unique: true,
+            index: true,
+        },
         canonicalKey: { type: String, required: true, index: true },
         sinkEventId: { type: String, required: true, index: true },
         batchID: { type: String, default: "", index: true },
@@ -55,4 +60,7 @@ alertDeliverySchema.index({ sinkEventId: 1, updatedAt: -1 });
 /**
  * Mongoose model for canonical alert sink delivery state.
  */
-export const AlertDelivery = mongoose.model("AlertDelivery", alertDeliverySchema);
+export const AlertDelivery = mongoose.model(
+    "AlertDelivery",
+    alertDeliverySchema,
+);

@@ -50,25 +50,27 @@ Backend will fail startup if:
 
 ## JSON Profile Shape
 
+```json
 {
-  "profile": "staging",
-  "channelName": "supplychain-staging",
-  "chaincodeName": "drugtracker",
-  "publicScanRole": "Regulator",
-  "organizations": {
-    "Manufacturer": {
-      "mspId": "ManufacturerMSP",
-      "peerEndpoint": "peer0.manufacturer.staging.example.com:7051",
-      "peerHostAlias": "peer0.manufacturer.staging.example.com",
-      "tlsCertPath": "/etc/hyperledger/fabric/manufacturer/tls/ca.crt",
-      "certPath": "/etc/hyperledger/fabric/manufacturer/signcerts/cert.pem",
-      "keyPath": "/etc/hyperledger/fabric/manufacturer/keystore"
-    }
-  }
+	"profile": "staging",
+	"channelName": "supplychain-staging",
+	"chaincodeName": "drugtracker",
+	"publicScanRole": "Regulator",
+	"organizations": {
+		"Manufacturer": {
+			"mspId": "ManufacturerMSP",
+			"peerEndpoint": "peer0.manufacturer.staging.example.com:7051",
+			"peerHostAlias": "peer0.manufacturer.staging.example.com",
+			"tlsCertPath": "/etc/hyperledger/fabric/manufacturer/tls/ca.crt",
+			"certPath": "/etc/hyperledger/fabric/manufacturer/signcerts/cert.pem",
+			"keyPath": "/etc/hyperledger/fabric/manufacturer/keystore"
+		}
+	}
 }
+```
 
 ## Notes
 
-- Environment variables FABRIC_<ROLE>_* override JSON profile values.
+- Environment variables `FABRIC_<ROLE>_*` override JSON profile values.
 - Profile mismatch between FABRIC_PROFILE and JSON profile field will fail startup.
 - Local profile files are examples; do not store production private keys in git.

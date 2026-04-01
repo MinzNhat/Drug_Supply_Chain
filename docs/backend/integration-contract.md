@@ -53,15 +53,15 @@ Decision rules in Backend:
 
 Canonical codebook used by Backend, chaincode-event mapping, and outbound sink IDs:
 
-| Canonical Key | Backend Decision | Chaincode Event | Sink Event ID |
-| --- | --- | --- | --- |
-| `SCAN_ACCEPTED` | `SCAN_ACCEPTED` | n/a | `DATN_SCAN_ACCEPTED` |
-| `SCAN_REJECTED` | `SCAN_REJECTED` | n/a | `DATN_SCAN_REJECTED` |
-| `RECALL_ALERT` | `EmergencyRecall` action | `RecallAlert` | `DATN_RECALL_ALERT` |
-| `LEDGER_SCAN_WARNING` | n/a | `GovMonitor` | `DATN_LEDGER_SCAN_WARNING` |
-| `LEDGER_SCAN_SUSPICIOUS` | n/a | `PublicAlert` | `DATN_LEDGER_SCAN_SUSPICIOUS` |
-| `PROTECTED_QR_BOUND` | n/a | `ProtectedQRBound` | `DATN_PROTECTED_QR_BOUND` |
-| `PROTECTED_QR_VERIFICATION_RECORDED` | n/a | `ProtectedQRVerificationRecorded` | `DATN_PROTECTED_QR_VERIFICATION_RECORDED` |
+| Canonical Key                        | Backend Decision         | Chaincode Event                   | Sink Event ID                             |
+| ------------------------------------ | ------------------------ | --------------------------------- | ----------------------------------------- |
+| `SCAN_ACCEPTED`                      | `SCAN_ACCEPTED`          | n/a                               | `DATN_SCAN_ACCEPTED`                      |
+| `SCAN_REJECTED`                      | `SCAN_REJECTED`          | n/a                               | `DATN_SCAN_REJECTED`                      |
+| `RECALL_ALERT`                       | `EmergencyRecall` action | `RecallAlert`                     | `DATN_RECALL_ALERT`                       |
+| `LEDGER_SCAN_WARNING`                | n/a                      | `GovMonitor`                      | `DATN_LEDGER_SCAN_WARNING`                |
+| `LEDGER_SCAN_SUSPICIOUS`             | n/a                      | `PublicAlert`                     | `DATN_LEDGER_SCAN_SUSPICIOUS`             |
+| `PROTECTED_QR_BOUND`                 | n/a                      | `ProtectedQRBound`                | `DATN_PROTECTED_QR_BOUND`                 |
+| `PROTECTED_QR_VERIFICATION_RECORDED` | n/a                      | `ProtectedQRVerificationRecorded` | `DATN_PROTECTED_QR_VERIFICATION_RECORDED` |
 
 Backend mapper module:
 
@@ -82,13 +82,13 @@ All API errors use:
 
 ```json
 {
-    "success": false,
-    "error": {
-        "code": "STRING_CODE",
-        "message": "Human readable message",
-        "trace_id": "request-trace-id",
-        "details": {}
-    }
+  "success": false,
+  "error": {
+    "code": "STRING_CODE",
+    "message": "Human readable message",
+    "trace_id": "request-trace-id",
+    "details": {}
+  }
 }
 ```
 

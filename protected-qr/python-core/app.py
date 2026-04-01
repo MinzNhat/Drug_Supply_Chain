@@ -134,10 +134,11 @@ async def verify_qr_endpoint(req: VerifyRequest):
         )
         verify = None
         for _, pattern in patterns:
-            candidate = verify_pattern_authenticity(
-                pattern, token, pattern_modules=56
-            )
-            if verify is None or candidate["confidence_score"] > verify["confidence_score"]:
+            candidate = verify_pattern_authenticity(pattern, token, pattern_modules=56)
+            if (
+                verify is None
+                or candidate["confidence_score"] > verify["confidence_score"]
+            ):
                 verify = candidate
 
         return {

@@ -252,7 +252,10 @@ test("integration: alert side effects are non-blocking when archive/sink fails",
         deliveryService,
     );
 
-    const result = await service.verifyProduct(Buffer.from("img"), "trace-non-blocking");
+    const result = await service.verifyProduct(
+        Buffer.from("img"),
+        "trace-non-blocking",
+    );
 
     assert.equal(result.decision.accepted, true);
     assert.equal(result.decision.code, "SCAN_ACCEPTED");

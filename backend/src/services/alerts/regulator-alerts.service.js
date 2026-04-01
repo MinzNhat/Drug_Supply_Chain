@@ -14,7 +14,7 @@ const toCsvField = (value) => {
               ? value
               : JSON.stringify(value);
 
-    if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+    if (text.includes(",") || text.includes('"') || text.includes("\n")) {
         return `"${text.replace(/\"/g, '""')}"`;
     }
 
@@ -116,7 +116,11 @@ export class RegulatorAlertsService {
      */
     ensureRegulator(actor) {
         if (actor?.role !== "Regulator") {
-            throw new HttpException(403, "FORBIDDEN", "Regulator access required");
+            throw new HttpException(
+                403,
+                "FORBIDDEN",
+                "Regulator access required",
+            );
         }
     }
 
@@ -161,7 +165,10 @@ export class RegulatorAlertsService {
         this.ensureRegulator(actor);
 
         const format = query.format === "csv" ? "csv" : "json";
-        const limit = Math.min(10_000, Math.max(1, Number(query.limit ?? 1000)));
+        const limit = Math.min(
+            10_000,
+            Math.max(1, Number(query.limit ?? 1000)),
+        );
         const exportedAt = new Date().toISOString();
         const filters = {
             canonicalKey: query.canonicalKey,
@@ -174,7 +181,10 @@ export class RegulatorAlertsService {
             to: query.to,
         };
 
-        const items = await this.alertArchiveRepository.listForExport(filters, limit);
+        const items = await this.alertArchiveRepository.listForExport(
+            filters,
+            limit,
+        );
         const summary = summarizeAlerts(items);
         const sinkDelivery = await this.sinkAdapter.publishReport({
             actor,

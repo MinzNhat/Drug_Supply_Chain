@@ -194,7 +194,9 @@ const aiVerificationEnabled = asBoolean(
     false,
 );
 
-const fabricProfile = normalizeFabricProfile(process.env.FABRIC_PROFILE ?? "local");
+const fabricProfile = normalizeFabricProfile(
+    process.env.FABRIC_PROFILE ?? "local",
+);
 const fabricProfileFile = asNonEmptyString(process.env.FABRIC_PROFILE_FILE, "");
 
 /**

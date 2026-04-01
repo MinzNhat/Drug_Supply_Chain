@@ -60,4 +60,3 @@ export const DELIVERABLE_CANONICAL_ALERT_KEYS = Object.freeze([
     "SCAN_REJECTED",
     "RECALL_ALERT",
 ]);
-
