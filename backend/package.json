@@ -10,6 +10,7 @@
     "test": "node --test test/unit",
     "test:integration": "node --test test/integration",
     "e2e:runtime": "node ../scripts/backend/e2e-runtime.mjs",
+    "e2e:geo": "node ../scripts/backend/e2e-geo-flow.mjs",
     "e2e:transfer": "node ../scripts/backend/e2e-transfer-batch.mjs"
   },
   "dependencies": {

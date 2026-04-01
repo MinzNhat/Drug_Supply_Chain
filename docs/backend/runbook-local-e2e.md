@@ -5,6 +5,7 @@
 Run Blockchain + Protected QR + Backend locally and verify end-to-end flows:
 
 - Public scan verification flow.
+- Geo event ingest -> timeline -> heatmap API flow.
 - Ownership transfer flow (Ship then Receive).
 
 ## Fast Path (Unified Workspace Command)
@@ -21,7 +22,8 @@ This single command:
 2. Adds Org3 to `mychannel`.
 3. Starts Mongo + Protected QR + Backend via root `docker-compose.yml`.
 4. Runs runtime E2E (`scripts/backend/e2e-runtime.mjs`).
-5. Runs transfer-batch E2E (`scripts/backend/e2e-transfer-batch.mjs`).
+5. Runs geo-flow E2E (`scripts/backend/e2e-geo-flow.mjs`).
+6. Runs transfer-batch E2E (`scripts/backend/e2e-transfer-batch.mjs`).
 
 Stop everything:
 
@@ -134,6 +136,13 @@ Dedicated transfer-only E2E:
 ```bash
 cd backend
 npm run e2e:transfer
+```
+
+Dedicated geo-flow E2E:
+
+```bash
+cd backend
+npm run e2e:geo
 ```
 
 ## 6. Run Automated Tests

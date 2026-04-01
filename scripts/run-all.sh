@@ -17,14 +17,15 @@ E2E_RUNNER_PREPARED="false"
 usage() {
     cat <<'EOF'
 Usage:
-    ./scripts/run-all.sh [prereq|up|test|test-transfer|full|down|status]
+    ./scripts/run-all.sh [prereq|up|test|test-geo|test-transfer|full|down|status]
 
 Modes:
   prereq  Install Fabric prerequisites via test-network helper.
   up      Start Fabric network + chaincode + org3 and app services.
   test    Run runtime E2E against running stack.
+    test-geo Run geo-flow E2E against running stack.
     test-transfer  Run transfer-batch E2E against running stack.
-    full    Run up then runtime E2E and transfer-batch E2E.
+    full    Run up then runtime E2E, geo-flow E2E, and transfer-batch E2E.
   down    Stop app services and tear down Fabric network.
   status  Print app and Fabric container status.
 
@@ -179,6 +180,11 @@ run_test() {
     compose_cmd --profile e2e run --rm e2e-runner
 }
 
+run_test_geo() {
+    ensure_e2e_runner_image
+    compose_cmd --profile e2e run --rm e2e-runner node scripts/backend/e2e-geo-flow.mjs
+}
+
 run_test_transfer() {
     ensure_e2e_runner_image
     compose_cmd --profile e2e run --rm e2e-runner node scripts/backend/e2e-transfer-batch.mjs
@@ -216,12 +222,16 @@ main() {
         test)
             run_test
             ;;
+        test-geo)
+            run_test_geo
+            ;;
         test-transfer)
             run_test_transfer
             ;;
         full)
             run_up
             run_test
+            run_test_geo
             run_test_transfer
             ;;
         down)
