@@ -6,6 +6,11 @@ It follows the same split pattern as Protected QR:
 - Node API gateway (`ai-service`): stable `/api/v1/verify` contract for backend.
 - Python core (`ai-python-core`): YOLO inference runtime.
 
+Centralized docs:
+
+- `docs/ai-service/service-overview.md`
+- `docs/ai-service/swagger.yaml`
+
 ## What It Does
 
 - Accepts one packaging image (`multipart/form-data`, field `image`).

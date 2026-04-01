@@ -36,6 +36,8 @@ This repository uses a centralized documentation structure under `docs/`.
 
 ## AI Service
 
+- `docs/ai-service/service-overview.md`
+- `docs/ai-service/swagger.yaml`
 - `ai-service/README.md`
 
 ## Legal

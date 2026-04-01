@@ -32,6 +32,9 @@ target/
 vendor/
 .venv/
 **/.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
 
 # Blockchain generated files
 blockchain/bin/

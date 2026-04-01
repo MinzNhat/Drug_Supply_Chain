@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: AI Appearance Service API
+  version: 1.0.0
+  description: Node gateway API for packaging appearance verification
+servers:
+  - url: http://localhost:8701
+paths:
+  /health:
+    get:
+      summary: Service health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                    example: true
+  /api/v1/verify:
+    post:
+      summary: Verify product packaging image
+      description: Run AI appearance verification with strict counterfeit policy.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  format: binary
+              required:
+                - image
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyResponse"
+        "400":
+          description: Invalid image payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Model unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal service error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    VerifyResponse:
+      type: object
+      properties:
+        accepted:
+          type: boolean
+          example: false
+        is_authentic:
+          type: boolean
+          example: false
+        confidence_score:
+          type: number
+          example: 0.81
+        verdict:
+          type: string
+          example: SUSPICIOUS
+        decision_reason:
+          type: string
+          example: counterfeit_signal_detected
+        counterfeit_min_score:
+          type: number
+          example: 0.6
+        authentic_min_score:
+          type: number
+          example: 0.75
+        counterfeit_score:
+          type: number
+          example: 0.81
+        authentic_score:
+          type: number
+          example: 0.22
+        detections:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+                example: counterfeit
+              confidence:
+                type: number
+                example: 0.81
+              bbox:
+                type: array
+                items:
+                  type: number
+                example: [102.4, 88.1, 560.2, 690.7]
+        model_path:
+          type: string
+          example: /models/best.pt
+        latency_ms:
+          type: number
+          example: 38.4
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: AI_MODEL_UNAVAILABLE
+            message:
+              type: string
+              example: AI model is unavailable
+            traceId:
+              type: string
+              example: 8a58ec0f-1d50-4f03-8a6d-4e9d96df88fc
+            details:
+              type: object
+              additionalProperties: true

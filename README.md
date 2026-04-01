@@ -7,7 +7,7 @@ It combines:
 - Hyperledger Fabric network and chaincode for immutable supply-chain state.
 - Backend API for auth, batch lifecycle, transfer, recall, event timeline, and analytics.
 - Protected QR service (Node + Python core) for anti-counterfeit verification.
-- AI appearance verification service (Python core) for packaging-image analysis.
+- AI appearance verification service (Node gateway + Python core) for packaging-image analysis.
 
 ## Repository Layout
 
