@@ -100,9 +100,25 @@ export class AiVerifierService {
         }
 
         try {
-            const response = await this.http.post("/verify", form, {
-                headers,
-            });
+            // Prefer the Node gateway contract and keep a compatibility fallback.
+            let response;
+            try {
+                response = await this.http.post("/api/v1/verify", form, {
+                    headers,
+                });
+            } catch (primaryError) {
+                if (
+                    axios.isAxiosError(primaryError) &&
+                    primaryError.response?.status === 404
+                ) {
+                    response = await this.http.post("/verify", form, {
+                        headers,
+                    });
+                } else {
+                    throw primaryError;
+                }
+            }
+
             const result = normalizeResult(response.data ?? {});
 
             return {

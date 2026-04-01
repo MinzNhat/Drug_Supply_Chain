@@ -1,0 +1,33 @@
+services:
+  python-core:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.python
+    container_name: ai-python-core
+    ports:
+      - "8700:8700"
+    environment:
+      AI_MODEL_PATH: /models/best.pt
+      AI_INFERENCE_DEVICE: ${AI_INFERENCE_DEVICE:-cpu}
+      AI_INFERENCE_IMG_SIZE: ${AI_INFERENCE_IMG_SIZE:-640}
+      AI_CONFIDENCE_THRESHOLD: ${AI_CONFIDENCE_THRESHOLD:-0.25}
+      AI_COUNTERFEIT_MIN_SCORE: ${AI_COUNTERFEIT_MIN_SCORE:-0.55}
+      AI_COUNTERFEIT_LABELS: ${AI_COUNTERFEIT_LABELS:-counterfeit,fake,gia}
+      AI_AUTHENTIC_LABELS: ${AI_AUTHENTIC_LABELS:-authentic,genuine,real}
+    volumes:
+      - ./models:/models:ro
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.node
+    container_name: ai-service-api
+    ports:
+      - "8701:8701"
+    environment:
+      PORT: 8701
+      PYTHON_SERVICE_URL: http://python-core:8700
+      LOG_LEVEL: info
+      REQUEST_TIMEOUT_MS: 10000
+    depends_on:
+      - python-core

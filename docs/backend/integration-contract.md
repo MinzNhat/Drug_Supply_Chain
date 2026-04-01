@@ -44,6 +44,16 @@ Multipart request fields:
 - `image` (required): QR image payload.
 - `packagingImage` (optional): package photo used by AI adapter.
 
+AI service contract used by backend adapter:
+
+- Endpoint: `POST /api/v1/verify` (multipart field `image`).
+- Base URL: `AI_VERIFICATION_URL`.
+- Response fields consumed by backend: `accepted` (or `is_authentic`) and `confidence_score`.
+
+Compatibility note:
+
+- Backend adapter keeps fallback to legacy `POST /verify` if upstream returns `404`.
+
 Decision rules in Backend:
 
 - `SCAN_ACCEPTED`: QR physical check authentic, digest matched, ledger safety not `DANGER`, and AI lane (if enabled and provided) accepted.

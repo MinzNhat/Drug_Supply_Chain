@@ -23,7 +23,7 @@ This single command:
 
 1. Boots Fabric and deploys chaincode.
 2. Adds Org3 to `mychannel`.
-3. Starts Mongo + Protected QR + Backend via root `docker-compose.yml`.
+3. Starts Mongo + Protected QR + AI Appearance + Backend via root `docker-compose.yml`.
 4. Runs runtime E2E (`scripts/backend/e2e-runtime.mjs`).
 5. Runs geo-flow E2E (`scripts/backend/e2e-geo-flow.mjs`).
 6. Runs transfer-batch E2E (`scripts/backend/e2e-transfer-batch.mjs`).
@@ -89,6 +89,22 @@ source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
+
+## 2.1 Start AI Appearance Service
+
+The root stack already includes:
+
+- `ai-python-core` on port `8700`
+- `ai-service` (Node gateway) on port `8701`
+
+To enable backend AI lane in root compose, set:
+
+```bash
+export DATN_AI_VERIFICATION_ENABLED=true
+export DATN_AI_VERIFICATION_URL=http://ai-service:8701
+```
+
+Place trained model at `ai-service/models/best.pt` before enabling.
 
 ## 3. Configure Backend
 

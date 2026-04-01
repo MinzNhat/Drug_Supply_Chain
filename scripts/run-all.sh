@@ -166,12 +166,14 @@ run_up() {
     fi
 
     if [[ "${STACK_BUILD_IMAGES}" == "true" ]]; then
-        compose_cmd up -d --build mongo qr-python-core qr-service backend
+        compose_cmd up -d --build mongo qr-python-core qr-service ai-python-core ai-service backend
     else
-        compose_cmd up -d mongo qr-python-core qr-service backend
+        compose_cmd up -d mongo qr-python-core qr-service ai-python-core ai-service backend
     fi
 
     wait_for_http "http://localhost:8080/health" 80 2
+    wait_for_http "http://localhost:8700/health" 80 2
+    wait_for_http "http://localhost:8701/health" 80 2
     wait_for_http "http://localhost:8090/health" 80 2
 
     echo "Stack is ready."

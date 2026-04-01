@@ -7,6 +7,7 @@ It combines:
 - Hyperledger Fabric network and chaincode for immutable supply-chain state.
 - Backend API for auth, batch lifecycle, transfer, recall, event timeline, and analytics.
 - Protected QR service (Node + Python core) for anti-counterfeit verification.
+- AI appearance verification service (Python core) for packaging-image analysis.
 
 ## Repository Layout
 
@@ -22,7 +23,7 @@ It combines:
 Local E2E uses one root Docker Compose and root orchestration scripts:
 
 1. Fabric network + chaincode come up.
-2. Mongo + Protected QR + Backend services start.
+2. Mongo + Protected QR + AI + Backend services start.
 3. Runtime API tests run against healthy services.
 4. Transfer-batch E2E runs as a dedicated step.
 

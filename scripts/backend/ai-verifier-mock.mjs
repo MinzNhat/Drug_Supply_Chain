@@ -22,7 +22,10 @@ const server = http.createServer((request, response) => {
         return;
     }
 
-    if (request.method === "POST" && request.url === "/verify") {
+    if (
+        request.method === "POST" &&
+        (request.url === "/verify" || request.url === "/api/v1/verify")
+    ) {
         // Drain request body and always emit a deterministic AI reject response.
         request.on("data", () => {});
         request.on("end", () => {

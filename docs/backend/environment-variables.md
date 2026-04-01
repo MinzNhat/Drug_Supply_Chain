@@ -14,7 +14,7 @@
 | `LOG_LEVEL`                          | No       | `info`                                                | Logging level.                                       |
 | `REQUEST_TIMEOUT_MS`                 | No       | `10000`                                               | Inter-service HTTP timeout.                          |
 | `AI_VERIFICATION_ENABLED`            | No       | `false`                                               | Enables optional packaging AI verification.          |
-| `AI_VERIFICATION_URL`                | No       | `http://localhost:8700`                               | AI verification API base URL.                        |
+| `AI_VERIFICATION_URL`                | No       | `http://localhost:8701`                               | AI verification API base URL (Node AI gateway).      |
 | `AI_VERIFICATION_TIMEOUT_MS`         | No       | `10000`                                               | Timeout for AI verification calls.                   |
 | `AI_VERIFICATION_FAIL_OPEN`          | No       | `true`                                                | Allow verification to continue if AI is down.        |
 | `ALERT_SINK_ENABLED`                 | No       | `true`                                                | Enable canonical alert sink delivery workflow.       |
@@ -105,6 +105,42 @@ Example for Fabric test-network identities:
 | `HMAC_SECRET_FILE`   | No       | `/run/secrets/qr_hmac_secret` |
 | `LOG_LEVEL`          | No       | `info`                        |
 | `REQUEST_TIMEOUT_MS` | No       | `10000`                       |
+
+## AI Appearance Service (`ai-service/.env`)
+
+Node API gateway variables:
+
+| Variable             | Required | Example                 | Description                                  |
+| -------------------- | -------- | ----------------------- | -------------------------------------------- |
+| `PORT`               | Yes      | `8701`                  | AI Node API port.                            |
+| `PYTHON_SERVICE_URL` | Yes      | `http://localhost:8700` | Python core base URL consumed by Node API.   |
+| `LOG_LEVEL`          | No       | `info`                  | Logging level for AI Node API.               |
+| `REQUEST_TIMEOUT_MS` | No       | `10000`                 | Timeout for Node -> Python calls.            |
+
+Python core variables:
+
+| Variable                     | Required | Example                       | Description                                                    |
+| ---------------------------- | -------- | ----------------------------- | -------------------------------------------------------------- |
+| `AI_MODEL_PATH`              | Yes      | `/models/best.pt`             | YOLO weights path used by `/verify`.                           |
+| `AI_INFERENCE_DEVICE`        | No       | `cpu`                         | Inference device (`cpu`, `mps`, `cuda:0` depending on runtime). |
+| `AI_INFERENCE_IMG_SIZE`      | No       | `640`                         | Inference image size.                                          |
+| `AI_CONFIDENCE_THRESHOLD`    | No       | `0.25`                        | Minimum detection confidence used by YOLO predict.             |
+| `AI_COUNTERFEIT_MIN_SCORE`   | No       | `0.55`                        | Minimum counterfeit label confidence that forces reject.       |
+| `AI_COUNTERFEIT_LABELS`      | No       | `counterfeit,fake,gia`        | Comma-separated aliases interpreted as counterfeit class.      |
+| `AI_AUTHENTIC_LABELS`        | No       | `authentic,genuine,real`      | Comma-separated aliases interpreted as authentic class.        |
+
+Root compose convenience overrides:
+
+- `DATN_AI_VERIFICATION_ENABLED`
+- `DATN_AI_VERIFICATION_URL`
+- `DATN_AI_VERIFICATION_TIMEOUT_MS`
+- `DATN_AI_VERIFICATION_FAIL_OPEN`
+- `DATN_AI_INFERENCE_DEVICE`
+- `DATN_AI_INFERENCE_IMG_SIZE`
+- `DATN_AI_CONFIDENCE_THRESHOLD`
+- `DATN_AI_COUNTERFEIT_MIN_SCORE`
+- `DATN_AI_COUNTERFEIT_LABELS`
+- `DATN_AI_AUTHENTIC_LABELS`
 
 ## Blockchain Defaults (`blockchain/.env.example`)
 

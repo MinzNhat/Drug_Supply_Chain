@@ -70,6 +70,62 @@ services:
     networks:
       - app-network
 
+  ai-python-core:
+    build:
+      context: ./ai-service
+      dockerfile: docker/Dockerfile.python
+    container_name: ai-python-core
+    ports:
+      - "8700:8700"
+    environment:
+      AI_MODEL_PATH: /models/best.pt
+      AI_INFERENCE_DEVICE: ${DATN_AI_INFERENCE_DEVICE:-cpu}
+      AI_INFERENCE_IMG_SIZE: ${DATN_AI_INFERENCE_IMG_SIZE:-640}
+      AI_CONFIDENCE_THRESHOLD: ${DATN_AI_CONFIDENCE_THRESHOLD:-0.25}
+      AI_COUNTERFEIT_MIN_SCORE: ${DATN_AI_COUNTERFEIT_MIN_SCORE:-0.55}
+      AI_COUNTERFEIT_LABELS: ${DATN_AI_COUNTERFEIT_LABELS:-counterfeit,fake,gia}
+      AI_AUTHENTIC_LABELS: ${DATN_AI_AUTHENTIC_LABELS:-authentic,genuine,real}
+    volumes:
+      - ./ai-service/models:/models:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://127.0.0.1:8700/health'', timeout=2)"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app-network
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: docker/Dockerfile.node
+    container_name: ai-service
+    ports:
+      - "8701:8701"
+    environment:
+      PORT: 8701
+      PYTHON_SERVICE_URL: http://ai-python-core:8700
+      LOG_LEVEL: info
+      REQUEST_TIMEOUT_MS: 10000
+    depends_on:
+      ai-python-core:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'node -e "require(''http'').get(''http://127.0.0.1:8701/health'',(r)=>process.exit(r.statusCode===200?0:1)).on(''error'',()=>process.exit(1))"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - app-network
+
   backend:
     build:
       context: .
@@ -87,6 +143,10 @@ services:
       JWT_EXPIRES_IN: 8h
       LOG_LEVEL: info
       REQUEST_TIMEOUT_MS: 10000
+      AI_VERIFICATION_ENABLED: ${DATN_AI_VERIFICATION_ENABLED:-false}
+      AI_VERIFICATION_URL: ${DATN_AI_VERIFICATION_URL:-http://ai-service:8701}
+      AI_VERIFICATION_TIMEOUT_MS: ${DATN_AI_VERIFICATION_TIMEOUT_MS:-10000}
+      AI_VERIFICATION_FAIL_OPEN: ${DATN_AI_VERIFICATION_FAIL_OPEN:-true}
       ALERT_SINK_ENABLED: true
       ALERT_SINK_TYPE: logger
       ALERT_SINK_RETRY_MAX_ATTEMPTS: 3
@@ -130,11 +190,12 @@ services:
       FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
       FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
       FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore
-      AI_VERIFICATION_ENABLED: false
     depends_on:
       mongo:
         condition: service_healthy
       qr-service:
+        condition: service_healthy
+      ai-service:
         condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -34,6 +34,10 @@ This repository uses a centralized documentation structure under `docs/`.
 - `docs/protected-qr/service-overview.md`
 - `docs/protected-qr/swagger.yaml`
 
+## AI Service
+
+- `ai-service/README.md`
+
 ## Legal
 
 - `docs/legal/blockchain-license.txt`
