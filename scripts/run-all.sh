@@ -17,7 +17,7 @@ E2E_RUNNER_PREPARED="false"
 usage() {
     cat <<'EOF'
 Usage:
-    ./scripts/run-all.sh [prereq|up|test|test-geo|test-transfer|full|down|status]
+    ./scripts/run-all.sh [prereq|up|test|test-geo|test-transfer|test-transfer-negative|full|down|status]
 
 Modes:
   prereq  Install Fabric prerequisites via test-network helper.
@@ -25,7 +25,8 @@ Modes:
   test    Run runtime E2E against running stack.
     test-geo Run geo-flow E2E against running stack.
     test-transfer  Run transfer-batch E2E against running stack.
-    full    Run up then runtime E2E, geo-flow E2E, and transfer-batch E2E.
+    test-transfer-negative  Run transfer negative-path E2E against running stack.
+    full    Run up then runtime E2E, geo-flow E2E, transfer-batch E2E, and transfer negative-path E2E.
   down    Stop app services and tear down Fabric network.
   status  Print app and Fabric container status.
 
@@ -190,6 +191,11 @@ run_test_transfer() {
     compose_cmd --profile e2e run --rm e2e-runner node scripts/backend/e2e-transfer-batch.mjs
 }
 
+run_test_transfer_negative() {
+    ensure_e2e_runner_image
+    compose_cmd --profile e2e run --rm e2e-runner node scripts/backend/e2e-transfer-negative.mjs
+}
+
 run_down() {
     compose_cmd down -v --remove-orphans || true
     "${BLOCKCHAIN_SCRIPT_DIR}/blockchain-run.sh" down || true
@@ -228,11 +234,15 @@ main() {
         test-transfer)
             run_test_transfer
             ;;
+        test-transfer-negative)
+            run_test_transfer_negative
+            ;;
         full)
             run_up
             run_test
             run_test_geo
             run_test_transfer
+            run_test_transfer_negative
             ;;
         down)
             run_down
