@@ -54,9 +54,9 @@ const toTransferState = (batch) => ({
 
 const run = async () => {
     const now = Date.now();
-    const manufacturerUsername = `manu_transfer_negative_${now}`;
-    const distributorUsername = `dist_transfer_negative_${now}`;
-    const regulatorUsername = `reg_transfer_negative_${now}`;
+    const manufacturerUsername = `manu_tn_${now}`;
+    const distributorUsername = `dist_tn_${now}`;
+    const regulatorUsername = `reg_tn_${now}`;
 
     await register(
         request,
