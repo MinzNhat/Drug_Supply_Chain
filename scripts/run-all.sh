@@ -17,7 +17,7 @@ E2E_RUNNER_PREPARED="false"
 usage() {
     cat <<'EOF'
 Usage:
-    ./scripts/run-all.sh [prereq|up|test|test-geo|test-transfer|test-transfer-negative|test-ai|full|down|status]
+    ./scripts/run-all.sh [prereq|up|test|test-geo|test-transfer|test-transfer-negative|test-ai|test-capacity|full|down|status]
 
 Modes:
   prereq  Install Fabric prerequisites via test-network helper.
@@ -27,6 +27,7 @@ Modes:
     test-transfer  Run transfer-batch E2E against running stack.
     test-transfer-negative  Run transfer negative-path E2E against running stack.
     test-ai Run AI edge-path + alert/report E2E against running stack.
+        test-capacity Run SLO/capacity gate scenarios against running stack.
     full    Run up then runtime E2E, geo-flow E2E, transfer-batch E2E, transfer negative-path E2E, and AI edge-path E2E.
   down    Stop app services and tear down Fabric network.
   status  Print app and Fabric container status.
@@ -201,9 +202,9 @@ run_test_transfer_negative() {
 
 run_test_ai() {
     if [[ "${STACK_BUILD_IMAGES}" == "true" ]]; then
-        compose_cmd --profile e2e-ai up -d --build ai-verifier-mock backend-ai-reject backend-ai-open backend-ai-close
+        compose_cmd --profile e2e-ai up -d --build --force-recreate --remove-orphans ai-verifier-mock backend-ai-reject backend-ai-open backend-ai-close
     else
-        compose_cmd --profile e2e-ai up -d ai-verifier-mock backend-ai-reject backend-ai-open backend-ai-close
+        compose_cmd --profile e2e-ai up -d --force-recreate --remove-orphans ai-verifier-mock backend-ai-reject backend-ai-open backend-ai-close
     fi
 
     wait_for_http "http://localhost:8095/health" 80 2
@@ -217,6 +218,11 @@ run_test_ai() {
         -e AI_FAIL_OPEN_BASE_URL=http://backend-ai-open:8090 \
         -e AI_FAIL_CLOSE_BASE_URL=http://backend-ai-close:8090 \
         e2e-runner node scripts/backend/e2e-ai-alerting.mjs
+}
+
+run_test_capacity() {
+    ensure_e2e_runner_image
+    compose_cmd --profile e2e run --rm e2e-runner node scripts/backend/e2e-capacity-gate.mjs
 }
 
 run_down() {
@@ -262,6 +268,9 @@ main() {
             ;;
         test-ai)
             run_test_ai
+            ;;
+        test-capacity)
+            run_test_capacity
             ;;
         full)
             run_up

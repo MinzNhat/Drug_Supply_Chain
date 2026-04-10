@@ -8,6 +8,10 @@ MODE="${1:-full}"
 
 mkdir -p "${OUTPUT_DIR}"
 
+reset_step_artifacts() {
+    find "${OUTPUT_DIR}" -maxdepth 1 -type f -name 'test_*.txt' -delete
+}
+
 slugify() {
     local raw="$1"
     echo "${raw}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//'
@@ -53,6 +57,7 @@ run_step() {
 }
 
 run_full_suite() {
+    reset_step_artifacts
     run_step 1 "prerequisites" "Install Fabric prerequisites and validate base tooling." "${RUNNER}" prereq
     run_step 2 "bring-up" "Start full stack (Fabric + services) with centralized orchestration." "${RUNNER}" up
     run_step 3 "runtime-e2e" "Execute end-to-end runtime API flow against healthy services." env STACK_BUILD_IMAGES=false STACK_BUILD_E2E_RUNNER=true "${RUNNER}" test
@@ -83,6 +88,9 @@ run_single_mode() {
         ai)
             run_step 7 "ai-alerting-e2e" "Validate AI reject/fail-open/fail-close behavior and regulator alert/report API side effects." "${RUNNER}" test-ai
             ;;
+        capacity)
+            run_step 9 "capacity-gate" "Validate SLO/capacity thresholds for health, batch list, and pre-confirm verify path." "${RUNNER}" test-capacity
+            ;;
         geo)
             run_step 4 "geo-flow-e2e" "Validate event ingest -> timeline -> heatmap API flow with auth scope assertions." "${RUNNER}" test-geo
             ;;
@@ -94,7 +102,7 @@ run_single_mode() {
             ;;
         *)
             echo "Unknown mode: ${MODE}"
-            echo "Usage: ./scripts/test-all.sh [full|prereq|up|test|geo|transfer|transfer-negative|ai|down]"
+            echo "Usage: ./scripts/test-all.sh [full|prereq|up|test|geo|transfer|transfer-negative|ai|capacity|down]"
             exit 1
             ;;
     esac
