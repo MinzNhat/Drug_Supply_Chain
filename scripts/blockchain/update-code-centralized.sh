@@ -95,7 +95,7 @@ install_if_needed() {
 
   setGlobals "$org"
 
-  if peer lifecycle chaincode queryinstalled --output json | jq -e --arg label "$label" '.installed_chaincodes[]? | select(.label == $label)' >/dev/null; then
+  if peer lifecycle chaincode queryinstalled --output json | jq -e --arg cc_label "$label" '.installed_chaincodes[]? | select(.label == $cc_label)' >/dev/null; then
     echo "Org${org}: package ${label} already installed, skipping."
     return 0
   fi
@@ -170,7 +170,7 @@ main() {
 
   setGlobals "${REGULATOR_ORG}"
   local package_id
-  package_id="$(peer lifecycle chaincode queryinstalled --output json | jq -r --arg label "$label" '.installed_chaincodes[]? | select(.label == $label) | .package_id' | head -n 1)"
+  package_id="$(peer lifecycle chaincode queryinstalled --output json | jq -r --arg cc_label "$label" '.installed_chaincodes[]? | select(.label == $cc_label) | .package_id' | head -n 1)"
   if [[ -z "${package_id}" ]]; then
     package_id="$(peer lifecycle chaincode calculatepackageid "${CC_NAME}.tar.gz")"
   fi
