@@ -1,8 +1,11 @@
 import { Router } from "express";
 import multer from "multer";
 import { createProductController } from "../../controllers/product/product.controller.js";
+import { DocumentStorageAdapter } from "../../integrations/document-storage/document-storage.adapter.js";
 import { authMiddleware } from "../../middleware/auth/auth.middleware.js";
+import { requireRoleMiddleware } from "../../middleware/auth/require-role.middleware.js";
 import { createAlertArchiveRepository } from "../../repositories/alert/alert-archive.repository.js";
+import { createBatchDocumentArtifactRepository } from "../../repositories/document/batch-document-artifact.repository.js";
 import { createLedgerRepository } from "../../repositories/ledger/create-ledger-repository.js";
 import { AiVerifierService } from "../../services/ai-verifier/ai-verifier.service.js";
 import { createAlertDeliveryService } from "../../services/alerts/alert-delivery.service.js";
@@ -16,13 +19,15 @@ import { SupplyChainService } from "../../services/supply-chain/supply-chain.ser
  */
 export const createProductRoutes = () => {
     const router = Router();
-    // Use in-memory multipart parsing for uploaded verification images.
-    const upload = multer();
+    // In-memory multipart parsing with 10 MB per-file cap for the public verify endpoint.
+    const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } });
 
     // Wire service dependencies once per router instance.
     const ledgerRepository = createLedgerRepository();
     const alertArchiveRepository = createAlertArchiveRepository();
+    const documentArtifactRepository = createBatchDocumentArtifactRepository();
     const alertDeliveryService = createAlertDeliveryService();
+    const documentStorageAdapter = new DocumentStorageAdapter();
     const qrService = new QrService();
     const aiVerifierService = new AiVerifierService();
     const supplyChainService = new SupplyChainService(
@@ -31,6 +36,8 @@ export const createProductRoutes = () => {
         aiVerifierService,
         alertArchiveRepository,
         alertDeliveryService,
+        documentStorageAdapter,
+        documentArtifactRepository,
     );
     const controller = createProductController(supplyChainService);
 
@@ -59,10 +66,34 @@ export const createProductRoutes = () => {
     router.post(
         "/verify",
         upload.fields([
-            { name: "image", maxCount: 1 },
-            { name: "packagingImage", maxCount: 1 },
+            { name: "qrImage", maxCount: 1 },
+            { name: "frontImage", maxCount: 1 },
+            { name: "backImage", maxCount: 1 },
         ]),
         controller.verifyProduct,
+    );
+
+    /**
+     * POST /api/v1/reports
+     * Public endpoint to report suspicious/counterfeit products.
+     */
+    router.post(
+        "/reports",
+        upload.fields([
+            { name: "paymentBill", maxCount: 1 },
+            { name: "additionalImage", maxCount: 1 },
+        ]),
+        controller.submitReport,
+    );
+
+    /**
+     * GET /api/v1/batches/:batchId/protected-qr
+     * Read anchored protected QR state for a batch.
+     */
+    router.get(
+        "/batches/:batchId/protected-qr",
+        authMiddleware,
+        controller.readProtectedQr,
     );
 
     /**
@@ -72,7 +103,19 @@ export const createProductRoutes = () => {
     router.post(
         "/batches/:batchId/protected-qr/bind",
         authMiddleware,
+        requireRoleMiddleware("Manufacturer"),
         controller.bindProtectedQr,
+    );
+
+    /**
+     * POST /api/v1/batches/:batchId/protected-qr/token-policy
+     * Regulator token policy actions: BLOCKLIST, REVOKE, RESTORE.
+     */
+    router.post(
+        "/batches/:batchId/protected-qr/token-policy",
+        authMiddleware,
+        requireRoleMiddleware("Regulator"),
+        controller.updateProtectedQrTokenPolicy,
     );
 
     /**
@@ -92,12 +135,24 @@ export const createProductRoutes = () => {
     );
 
     /**
+     * POST /api/v1/batches/:batchId/confirm-delivered-to-consumption
+     * Confirm that batch has reached consumption point (Distributor owner only).
+     */
+    router.post(
+        "/batches/:batchId/confirm-delivered-to-consumption",
+        authMiddleware,
+        requireRoleMiddleware("Distributor"),
+        controller.confirmDeliveredToConsumption,
+    );
+
+    /**
      * POST /api/v1/batches/:batchId/documents
      * Update IPFS document metadata.
      */
     router.post(
         "/batches/:batchId/documents",
         authMiddleware,
+        upload.single("document"),
         controller.updateDocument,
     );
 
@@ -108,6 +163,7 @@ export const createProductRoutes = () => {
     router.post(
         "/batches/:batchId/recall",
         authMiddleware,
+        requireRoleMiddleware("Regulator"),
         controller.recallBatch,
     );
 

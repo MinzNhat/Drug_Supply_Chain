@@ -8,9 +8,11 @@ import {
     createBatchSchema,
     heatmapQuerySchema,
     listBatchesQuerySchema,
+    protectedQrTokenPolicySchema,
     recordBatchEventSchema,
     shipBatchSchema,
-    updateDocumentSchema,
+    updateDocumentBaseSchema,
+    updateDocumentCidSchema,
 } from "./product.schemas.js";
 
 /**
@@ -62,19 +64,71 @@ export const createProductController = (service) => {
     });
 
     /**
-     * Public product verification endpoint using uploaded QR and optional packaging image.
+     * Public product verification endpoint using uploaded QR and 2 product images.
      */
     const verifyProduct = asyncHandler(async (req, res) => {
-        const qrImage = getUploadedImage(req, "image");
+        const qrImage = getUploadedImage(req, "qrImage");
         if (!qrImage) {
-            throw new HttpException(400, "Image file is required");
+            throw new HttpException(400, "QR image file is required");
         }
 
-        const packagingImage = getUploadedImage(req, "packagingImage");
+        const frontImage = getUploadedImage(req, "frontImage");
+        const backImage = getUploadedImage(req, "backImage");
 
+        // The supply chain service currently takes one packaging image buffer. We'll pass the front image.
         const data = await service.verifyProduct(qrImage.buffer, req.traceId, {
-            packagingImageBuffer: packagingImage?.buffer ?? null,
+            packagingImageBuffer: frontImage?.buffer ?? null,
         });
+
+        // Add additional tracking logic here if needed for backImage
+        return res.status(200).json({ success: true, data });
+    });
+
+    /**
+     * Submit a counterfeit/suspicious report
+     */
+    const submitReport = asyncHandler(async (req, res) => {
+        const { productName, issues, description } = req.body;
+        
+        const paymentBill = getUploadedImage(req, "paymentBill");
+        const additionalImage = getUploadedImage(req, "additionalImage");
+
+        // Using our new Report Model to save to MongoDB
+        const { Report } = await import("../../models/report/report.model.js");
+
+        const report = new Report({
+            productName: productName || "Unknown",
+            issues: issues || "Other",
+            description: description || "",
+            paymentBillMeta: paymentBill ? { fileName: paymentBill.originalname, size: paymentBill.size } : null,
+            additionalImageMeta: additionalImage ? { fileName: additionalImage.originalname, size: additionalImage.size } : null,
+            status: "PENDING"
+        });
+
+        // Example local saving logic
+        const fs = await import("fs/promises");
+        const path = await import("path");
+        const reportDir = path.join(process.cwd(), "uploads", "reports", report._id.toString());
+        await fs.mkdir(reportDir, { recursive: true });
+
+        if (paymentBill) {
+            await fs.writeFile(path.join(reportDir, "paymentBill_" + paymentBill.originalname), paymentBill.buffer);
+        }
+        if (additionalImage) {
+            await fs.writeFile(path.join(reportDir, "additionalImage_" + additionalImage.originalname), additionalImage.buffer);
+        }
+
+        await report.save();
+
+        return res.status(201).json({ success: true, message: "Report submitted successfully.", reportId: report._id });
+    });
+
+    /**
+     * Read anchored protected QR state for a batch.
+     */
+    const readProtectedQr = asyncHandler(async (req, res) => {
+        const actor = requireActor(req);
+        const data = await service.readProtectedQr(req.params.batchId, actor);
         return res.status(200).json({ success: true, data });
     });
 
@@ -95,6 +149,32 @@ export const createProductController = (service) => {
             parsed.data,
             actor,
         );
+        return res.status(200).json({ success: true, data });
+    });
+
+    /**
+     * Apply protected QR token lifecycle policy action.
+     */
+    const updateProtectedQrTokenPolicy = asyncHandler(async (req, res) => {
+        const parsed = protectedQrTokenPolicySchema.safeParse(req.body);
+        if (!parsed.success) {
+            throw new HttpException(400, "Invalid request body", {
+                errors: parsed.error.flatten(),
+            });
+        }
+
+        const actor = requireActor(req);
+        const data = await service.updateProtectedQrTokenPolicy(
+            req.params.batchId,
+            {
+                actionType: parsed.data.actionType,
+                tokenDigest: parsed.data.tokenDigest.toLowerCase(),
+                reason: parsed.data.reason,
+                note: parsed.data.note,
+            },
+            actor,
+        );
+
         return res.status(200).json({ success: true, data });
     });
 
@@ -121,7 +201,11 @@ export const createProductController = (service) => {
 
         const data = await service.shipBatch(
             req.params.batchId,
-            targetOwnerMSP,
+            {
+                receiverMSP: targetOwnerMSP,
+                targetDistributorUnitId:
+                    parsed.data.targetDistributorUnitId ?? "",
+            },
             actor,
         );
         return res.status(200).json({ success: true, data });
@@ -137,23 +221,65 @@ export const createProductController = (service) => {
     });
 
     /**
-     * Update a batch document CID.
+     * Confirm that batch is delivered to consumption point.
+     */
+    const confirmDeliveredToConsumption = asyncHandler(async (req, res) => {
+        const actor = requireActor(req);
+        const data = await service.confirmDeliveredToConsumption(
+            req.params.batchId,
+            actor,
+        );
+        return res.status(200).json({ success: true, data });
+    });
+
+    /**
+     * Update a batch document by legacy CID mode or direct upload mode.
      */
     const updateDocument = asyncHandler(async (req, res) => {
-        const parsed = updateDocumentSchema.safeParse(req.body);
-        if (!parsed.success) {
+        const baseParsed = updateDocumentBaseSchema.safeParse(req.body);
+        if (!baseParsed.success) {
             throw new HttpException(400, "Invalid request body", {
-                errors: parsed.error.flatten(),
+                errors: baseParsed.error.flatten(),
             });
         }
 
+        const uploadedDocument = getUploadedImage(req, "document");
         const actor = requireActor(req);
+
+        if (uploadedDocument) {
+            const data = await service.updateDocument(
+                req.params.batchId,
+                {
+                    docType: baseParsed.data.docType,
+                    file: {
+                        buffer: uploadedDocument.buffer,
+                        mediaType: uploadedDocument.mimetype,
+                        sizeBytes: uploadedDocument.size,
+                        fileName: uploadedDocument.originalname,
+                    },
+                },
+                actor,
+            );
+
+            return res.status(200).json({ success: true, data });
+        }
+
+        const legacyParsed = updateDocumentCidSchema.safeParse(req.body);
+        if (!legacyParsed.success) {
+            throw new HttpException(400, "Invalid request body", {
+                errors: legacyParsed.error.flatten(),
+            });
+        }
+
         const data = await service.updateDocument(
             req.params.batchId,
-            parsed.data.docType,
-            parsed.data.newCID,
+            {
+                docType: legacyParsed.data.docType,
+                newCID: legacyParsed.data.newCID,
+            },
             actor,
         );
+
         return res.status(200).json({ success: true, data });
     });
 
@@ -226,10 +352,13 @@ export const createProductController = (service) => {
         createBatch,
         listBatches,
         readBatch,
+        readProtectedQr,
         verifyProduct,
         bindProtectedQr,
+        updateProtectedQrTokenPolicy,
         shipBatch,
         receiveBatch,
+        confirmDeliveredToConsumption,
         updateDocument,
         recallBatch,
         recordBatchEvent,
