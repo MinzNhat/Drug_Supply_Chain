@@ -8,8 +8,8 @@ networks:
     name: fabric_test
 
 services:
-  peer0.org3.example.com:
-    container_name: peer0.org3.example.com
+  peer0.distributor.drugguard.vn:
+    container_name: peer0.distributor.drugguard.vn
     image: hyperledger/fabric-peer:latest
     labels:
       service: hyperledger-fabric

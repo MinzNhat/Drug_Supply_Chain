@@ -14,9 +14,28 @@
 | `LOG_LEVEL`                          | No       | `info`                                                | Logging level.                                       |
 | `REQUEST_TIMEOUT_MS`                 | No       | `10000`                                               | Inter-service HTTP timeout.                          |
 | `AI_VERIFICATION_ENABLED`            | No       | `false`                                               | Enables optional packaging AI verification.          |
+| `AI_VERIFICATION_PROFILE`            | No       | `local`                                               | AI policy profile (`local\|staging\|prod`).         |
+| `AI_VERIFICATION_PROFILE_FILE`       | No       | `backend/config/ai-profiles/staging.example.json`     | Optional JSON profile for AI endpoint and ownership policy. |
+| `AI_VERIFICATION_STRICT_CONFIG`      | No       | `false` (local), `true` (staging/prod)                | Enforce strict non-local endpoint and ownership metadata checks. |
 | `AI_VERIFICATION_URL`                | No       | `http://localhost:8701`                               | AI verification API base URL (Node AI gateway).      |
 | `AI_VERIFICATION_TIMEOUT_MS`         | No       | `10000`                                               | Timeout for AI verification calls.                   |
 | `AI_VERIFICATION_FAIL_OPEN`          | No       | `true`                                                | Allow verification to continue if AI is down.        |
+| `AI_VERIFICATION_OWNER_SERVICE`      | No       | `platform-backend@company.example`                    | Service owner accountable for backend AI integration. |
+| `AI_VERIFICATION_OWNER_ML`           | No       | `ml-quality@company.example`                          | Model owner accountable for model quality/rollout.   |
+| `AI_VERIFICATION_OWNER_ONCALL`       | No       | `#supplychain-ai-prod`                                | On-call contact/channel for AI incident escalation.  |
+| `AI_VERIFICATION_RUNBOOK_PATH`       | No       | `docs/ai-service/service-overview.md`                 | Runbook path used for operational reference.         |
+| `AI_VERIFICATION_RUNBOOK_ESCALATION` | No       | `sev-incident-ai-verification`                        | Escalation policy identifier or runbook section.     |
+| `DOC_UPLOAD_ENABLED`                 | No       | `false`                                               | Enables direct multipart upload mode for batch documents. |
+| `DOC_UPLOAD_PROVIDER`                | No       | `mock`                                                | Upload provider (`mock\|kubo\|pinata`).             |
+| `DOC_UPLOAD_TIMEOUT_MS`              | No       | `15000`                                               | Timeout for upload call to storage provider.         |
+| `DOC_UPLOAD_MAX_BYTES`               | No       | `5242880`                                             | Max accepted document size in bytes.                 |
+| `DOC_UPLOAD_REQUIRE_PINNED`          | No       | `true`                                                | Target policy flag: uploaded artifact should be pinned. |
+| `DOC_UPLOAD_PACKAGE_IMAGE_MEDIA_TYPES` | No     | `image/jpeg,image/png,image/webp`                     | Allowed media types for `docType=packageImage`.      |
+| `DOC_UPLOAD_QUALITY_CERT_MEDIA_TYPES` | No      | `application/pdf,image/jpeg,image/png`                | Allowed media types for `docType=qualityCert`.       |
+| `DOC_UPLOAD_KUBO_API_URL`            | No       | `http://127.0.0.1:5001`                               | Kubo RPC URL for `provider=kubo`.                    |
+| `DOC_UPLOAD_KUBO_AUTH_TOKEN`         | No       | `Bearer <token>`                                      | Optional Kubo auth header value.                     |
+| `DOC_UPLOAD_PINATA_API_URL`          | No       | `https://api.pinata.cloud`                            | Pinata API URL for `provider=pinata`.                |
+| `DOC_UPLOAD_PINATA_JWT`              | No       | `<jwt>`                                               | Required when `provider=pinata`.                     |
 | `ALERT_SINK_ENABLED`                 | No       | `true`                                                | Enable canonical alert sink delivery workflow.       |
 | `ALERT_SINK_TYPE`                    | No       | `logger`                                              | Sink adapter type (`logger\|webhook`).               |
 | `ALERT_SINK_RETRY_MAX_ATTEMPTS`      | No       | `3`                                                   | Max retry attempts for sink delivery.                |
@@ -38,6 +57,9 @@
 | `FABRIC_EVALUATE_RETRY_MAX_ATTEMPTS` | No       | `3`                                                   | Evaluate retry attempts.                             |
 | `FABRIC_SUBMIT_RETRY_MAX_ATTEMPTS`   | No       | `1`                                                   | Submit retry attempts.                               |
 | `FABRIC_PUBLIC_SCAN_ROLE`            | No       | `Regulator`                                           | Role identity for public scan ledger calls.          |
+| `FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_ENABLED` | No | `false`                                               | Enable distributor unit -> Fabric identity bridge.   |
+| `FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_REQUIRE_UNIT` | No | `true`                                            | Require `distributorUnitId` for distributor actors when bridge is enabled. |
+| `FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_UNITS_JSON` | No | `{"dist-unit-hcm":{"certPath":"...","keyPath":"..."}}` | JSON object mapping distributor units to dedicated Fabric identity config. |
 
 Role-bound identity material:
 
@@ -57,17 +79,32 @@ Profile files:
 - `backend/config/fabric-profiles/staging.example.json`
 - `backend/config/fabric-profiles/prod.example.json`
 
+AI profile files:
+
+- `backend/config/ai-profiles/local.example.json`
+- `backend/config/ai-profiles/staging.example.json`
+- `backend/config/ai-profiles/prod.example.json`
+
 Resolution priority for Fabric org fields:
 
 1. `FABRIC_<ROLE>_*` environment variables
 2. `FABRIC_PROFILE_FILE` JSON values
 3. Role default MSP fallback (`ManufacturerMSP`, `DistributorMSP`, `RegulatorMSP`)
 
+Distributor identity bridge mapping:
+
+- `FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_UNITS_JSON` overrides profile-file bridge units when provided.
+- Unit key format should be normalized lowercase id (for example `dist-unit-hcm`).
+- Unit mapping fields:
+	- Required: `certPath`, `keyPath`
+	- Optional overrides: `identityLabel`, `mspId`, `peerEndpoint`, `peerHostAlias`, `tlsCertPath`
+- If bridge is enabled and `FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_REQUIRE_UNIT=true`, distributor JWT must contain `distributorUnitId` and a matching configured unit mapping.
+
 MSP alias behavior:
 
-- API auth accepts both canonical MSPs (`ManufacturerMSP`, `DistributorMSP`, `RegulatorMSP`) and test-network aliases (`Org2MSP`, `Org3MSP`, `Org1MSP`).
+- API auth accepts both canonical MSPs (`ManufacturerMSP`, `DistributorMSP`, `RegulatorMSP`) and test-network aliases (`ManufacturerMSP`, `DistributorMSP`, `RegulatorMSP`).
 - Backend stores and uses canonical MSPs internally for consistent API contracts.
-- Fabric Gateway `*_MSP_ID` must match your actual certificate MSP (for Fabric test-network defaults: `Org2MSP`, `Org3MSP`, `Org1MSP`).
+- Fabric Gateway `*_MSP_ID` must match your actual certificate MSP (for Fabric test-network defaults: `ManufacturerMSP`, `DistributorMSP`, `RegulatorMSP`).
 
 Alert sink behavior:
 
@@ -87,11 +124,11 @@ Each role needs:
 
 Example for Fabric test-network identities:
 
-- `FABRIC_MANUFACTURER_MSP_ID=Org2MSP`
-- `FABRIC_MANUFACTURER_CERT_PATH=.../User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem`
-- `FABRIC_MANUFACTURER_KEY_PATH=.../User1@org2.example.com/msp/keystore`
-- `FABRIC_DISTRIBUTOR_MSP_ID=Org3MSP`
-- `FABRIC_REGULATOR_MSP_ID=Org1MSP`
+- `FABRIC_MANUFACTURER_MSP_ID=ManufacturerMSP`
+- `FABRIC_MANUFACTURER_CERT_PATH=.../User1@manufacturer.drugguard.vn/msp/signcerts/User1@manufacturer.drugguard.vn-cert.pem`
+- `FABRIC_MANUFACTURER_KEY_PATH=.../User1@manufacturer.drugguard.vn/msp/keystore`
+- `FABRIC_DISTRIBUTOR_MSP_ID=DistributorMSP`
+- `FABRIC_REGULATOR_MSP_ID=RegulatorMSP`
 
 ## Protected QR (`protected-qr/.env`)
 
@@ -133,9 +170,17 @@ Python core variables:
 Root compose convenience overrides:
 
 - `DATN_AI_VERIFICATION_ENABLED`
+- `DATN_AI_VERIFICATION_PROFILE`
+- `DATN_AI_VERIFICATION_PROFILE_FILE`
+- `DATN_AI_VERIFICATION_STRICT_CONFIG`
 - `DATN_AI_VERIFICATION_URL`
 - `DATN_AI_VERIFICATION_TIMEOUT_MS`
 - `DATN_AI_VERIFICATION_FAIL_OPEN`
+- `DATN_AI_VERIFICATION_OWNER_SERVICE`
+- `DATN_AI_VERIFICATION_OWNER_ML`
+- `DATN_AI_VERIFICATION_OWNER_ONCALL`
+- `DATN_AI_VERIFICATION_RUNBOOK_PATH`
+- `DATN_AI_VERIFICATION_RUNBOOK_ESCALATION`
 - `DATN_AI_INFERENCE_DEVICE`
 - `DATN_AI_INFERENCE_IMG_SIZE`
 - `DATN_AI_CONFIDENCE_THRESHOLD`
@@ -159,9 +204,9 @@ Root compose convenience overrides:
 
 When using root stack orchestration (`./scripts/run-all.sh`), backend Fabric paths are mounted into the container as:
 
-- `/fabric/organizations/peerOrganizations/org1.example.com/...`
-- `/fabric/organizations/peerOrganizations/org2.example.com/...`
-- `/fabric/organizations/peerOrganizations/org3.example.com/...`
+- `/fabric/organizations/peerOrganizations/regulator.drugguard.vn/...`
+- `/fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/...`
+- `/fabric/organizations/peerOrganizations/distributor.drugguard.vn/...`
 
 Root stack secret inputs:
 

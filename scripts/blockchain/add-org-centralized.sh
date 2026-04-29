@@ -6,7 +6,11 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 FABRIC_SAMPLES_HOME="${ROOT_DIR}/blockchain"
 TEST_NETWORK_HOME="${TEST_NETWORK_HOME:-${FABRIC_SAMPLES_HOME}/test-network}"
 export FABRIC_CFG_PATH="${FABRIC_SAMPLES_HOME}/config"
-export PATH="${FABRIC_SAMPLES_HOME}/bin:${PATH}"
+if [[ -f /.dockerenv ]]; then
+    export PATH="/usr/local/bin:${PATH}"
+else
+    export PATH="${FABRIC_SAMPLES_HOME}/bin:${PATH}"
+fi
 
 CHANNEL_NAME="${CHANNEL_NAME:-mychannel}"
 NEW_ORG_MSP="${NEW_ORG_MSP:-DistributorMSP}"
@@ -14,8 +18,12 @@ NEW_ORG_JSON="${NEW_ORG_JSON:-}"
 NEW_ORG_NUMBER="${NEW_ORG_NUMBER:-}"
 JOIN_AND_ANCHOR="${JOIN_AND_ANCHOR:-true}"
 REGULATOR_ORG="${REGULATOR_ORG:-1}"
-ORDERER_ENDPOINT="${ORDERER_ENDPOINT:-localhost:7050}"
-ORDERER_TLS_HOST="${ORDERER_TLS_HOST:-orderer.example.com}"
+if [[ -f /.dockerenv ]]; then
+    ORDERER_ENDPOINT="${ORDERER_ENDPOINT:-orderer1.drugguard.vn:7050}"
+else
+    ORDERER_ENDPOINT="${ORDERER_ENDPOINT:-localhost:7050}"
+fi
+ORDERER_TLS_HOST="${ORDERER_TLS_HOST:-orderer1.drugguard.vn}"
 WORKDIR="${WORKDIR:-${TEST_NETWORK_HOME}/channel-artifacts/centralized-${NEW_ORG_MSP}}"
 
 usage() {
@@ -31,7 +39,7 @@ Optional environment variables:
   JOIN_AND_ANCHOR    (default: true, effective only when NEW_ORG_NUMBER is set)
   REGULATOR_ORG      (default: 1)
   ORDERER_ENDPOINT   (default: localhost:7050)
-  ORDERER_TLS_HOST   (default: orderer.example.com)
+  ORDERER_TLS_HOST   (default: orderer1.drugguard.vn)
   TEST_NETWORK_HOME  (default: blockchain/test-network)
   WORKDIR            (default: test-network/channel-artifacts/centralized-<NEW_ORG_MSP>)
 

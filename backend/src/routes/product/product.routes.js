@@ -1,6 +1,8 @@
 import { Router } from "express";
 import multer from "multer";
 import { createProductController } from "../../controllers/product/product.controller.js";
+import { createDrugCategoryController } from "../../controllers/product/drug-category.controller.js";
+import { createFileController } from "../../controllers/system/file.controller.js";
 import { DocumentStorageAdapter } from "../../integrations/document-storage/document-storage.adapter.js";
 import { authMiddleware } from "../../middleware/auth/auth.middleware.js";
 import { requireRoleMiddleware } from "../../middleware/auth/require-role.middleware.js";
@@ -40,6 +42,93 @@ export const createProductRoutes = () => {
         documentArtifactRepository,
     );
     const controller = createProductController(supplyChainService);
+    const drugCategoryController = createDrugCategoryController(supplyChainService);
+    const fileController = createFileController();
+
+    /**
+     * GET /api/v1/files/:cid
+     * Serve stored file by CID.
+     */
+    router.get("/files/:cid", fileController.getFile);
+
+    /**
+     * POST /api/v1/drug-categories
+     * Register a new drug category (Manufacturer only).
+     */
+    router.post(
+        "/drug-categories",
+        authMiddleware,
+        requireRoleMiddleware("Manufacturer"),
+        upload.fields([
+            { name: "image", maxCount: 1 },
+            { name: "certificates", maxCount: 10 },
+        ]),
+        drugCategoryController.registerCategory,
+    );
+
+    /**
+     * GET /api/v1/drug-categories
+     */
+    router.get(
+        "/drug-categories",
+        authMiddleware,
+        drugCategoryController.listCategories,
+    );
+
+    /**
+     * POST /api/v1/drug-categories/direct
+     * Create a drug category directly (Regulator only).
+     */
+    router.post(
+        "/drug-categories/direct",
+        authMiddleware,
+        requireRoleMiddleware("Regulator"),
+        upload.fields([
+            { name: "image", maxCount: 1 },
+            { name: "certificates", maxCount: 10 },
+        ]),
+        drugCategoryController.createCategoryDirectly,
+    );
+
+    /**
+     * POST /api/v1/drug-categories/:categoryId/approve
+     */
+    router.post(
+        "/drug-categories/:categoryId/approve",
+        authMiddleware,
+        requireRoleMiddleware("Regulator"),
+        drugCategoryController.approveCategory,
+    );
+
+    /**
+     * POST /api/v1/drug-categories/:categoryId/reject
+     */
+    router.post(
+        "/drug-categories/:categoryId/reject",
+        authMiddleware,
+        requireRoleMiddleware("Regulator"),
+        drugCategoryController.rejectCategory,
+    );
+
+    /**
+     * DELETE /api/v1/drug-categories/:categoryId
+     */
+    router.delete(
+        "/drug-categories/:categoryId",
+        authMiddleware,
+        requireRoleMiddleware("Regulator"),
+        drugCategoryController.deleteCategory,
+    );
+
+    /**
+     * POST /api/v1/drug-categories/:categoryId/request-delete
+     */
+    router.post(
+        "/drug-categories/:categoryId/request-delete",
+        authMiddleware,
+        requireRoleMiddleware("Manufacturer"),
+        drugCategoryController.requestDeleteCategory,
+    );
 
     /**
      * POST /api/v1/batches
@@ -52,6 +141,11 @@ export const createProductRoutes = () => {
      * List batches for FE supply-chain screens.
      */
     router.get("/batches", authMiddleware, controller.listBatches);
+
+    /**
+     * GET /api/v1/batches/by-hash/:dataHash
+     */
+    router.get("/batches/by-hash/:dataHash", authMiddleware, controller.getBatchByHash);
 
     /**
      * GET /api/v1/batches/:batchId
@@ -74,6 +168,17 @@ export const createProductRoutes = () => {
     );
 
     /**
+     * POST /api/v1/qr-scanner-verify
+     * Staff-only QR decryption.
+     */
+    router.post(
+        "/qr-scanner-verify",
+        authMiddleware,
+        upload.single("image"),
+        controller.verifyQr,
+    );
+
+    /**
      * POST /api/v1/reports
      * Public endpoint to report suspicious/counterfeit products.
      */
@@ -84,6 +189,17 @@ export const createProductRoutes = () => {
             { name: "additionalImage", maxCount: 1 },
         ]),
         controller.submitReport,
+    );
+
+    /**
+     * GET /api/v1/reports/:reportId/images/:type
+     * Serve a report image from local storage (Regulator only).
+     */
+    router.get(
+        "/reports/:reportId/images/:type",
+        authMiddleware,
+        requireRoleMiddleware("Regulator"),
+        controller.getReportImage,
     );
 
     /**
@@ -163,7 +279,7 @@ export const createProductRoutes = () => {
     router.post(
         "/batches/:batchId/recall",
         authMiddleware,
-        requireRoleMiddleware("Regulator"),
+        requireRoleMiddleware(["Regulator", "Manufacturer"]),
         controller.recallBatch,
     );
 

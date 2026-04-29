@@ -4,7 +4,7 @@
 #
 
 volumes:
-  peer0.org3.example.com:
+  peer0.distributor.drugguard.vn:
 
 networks:
   test:
@@ -12,8 +12,8 @@ networks:
 
 services:
 
-  peer0.org3.example.com:
-    container_name: peer0.org3.example.com
+  peer0.distributor.drugguard.vn:
+    container_name: peer0.distributor.drugguard.vn
     image: hyperledger/fabric-peer:latest
     labels:
       service: hyperledger-fabric
@@ -28,19 +28,19 @@ services:
       - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
       - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
       # Peer specific variables
-      - CORE_PEER_ID=peer0.org3.example.com
-      - CORE_PEER_ADDRESS=peer0.org3.example.com:11051
+      - CORE_PEER_ID=peer0.distributor.drugguard.vn
+      - CORE_PEER_ADDRESS=peer0.distributor.drugguard.vn:11051
       - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
       - CORE_PEER_LISTENADDRESS=0.0.0.0:11051
-      - CORE_PEER_CHAINCODEADDRESS=peer0.org3.example.com:11052
+      - CORE_PEER_CHAINCODEADDRESS=peer0.distributor.drugguard.vn:11052
       - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:11052
-      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.org3.example.com:11051
-      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.org3.example.com:11051
-      - CORE_PEER_LOCALMSPID=Org3MSP
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.distributor.drugguard.vn:11051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.distributor.drugguard.vn:11051
+      - CORE_PEER_LOCALMSPID=DistributorMSP
     volumes:
         - ../peercfg:/etc/hyperledger/peercfg
-        - ../../organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com:/etc/hyperledger/fabric
-        - peer0.org3.example.com:/var/hyperledger/production
+        - ../../organizations/peerOrganizations/distributor.drugguard.vn/peers/peer0.distributor.drugguard.vn:/etc/hyperledger/fabric
+        - peer0.distributor.drugguard.vn:/var/hyperledger/production
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     ports:

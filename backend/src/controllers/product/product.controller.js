@@ -88,8 +88,9 @@ export const createProductController = (service) => {
      * Submit a counterfeit/suspicious report
      */
     const submitReport = asyncHandler(async (req, res) => {
-        const { productName, issues, description } = req.body;
-        
+        const { productName, issues, description, province, lat, lng, severity } = req.body;
+        const reporterIP = req.ip || req.headers["x-forwarded-for"] || "";
+
         const paymentBill = getUploadedImage(req, "paymentBill");
         const additionalImage = getUploadedImage(req, "additionalImage");
 
@@ -100,6 +101,11 @@ export const createProductController = (service) => {
             productName: productName || "Unknown",
             issues: issues || "Other",
             description: description || "",
+            province: province || "Unknown",
+            lat: lat ? Number(lat) : null,
+            lng: lng ? Number(lng) : null,
+            severity: severity || "warn",
+            reporterIP,
             paymentBillMeta: paymentBill ? { fileName: paymentBill.originalname, size: paymentBill.size } : null,
             additionalImageMeta: additionalImage ? { fileName: additionalImage.originalname, size: additionalImage.size } : null,
             status: "PENDING"
@@ -284,11 +290,22 @@ export const createProductController = (service) => {
     });
 
     /**
-     * Trigger emergency batch recall.
+     * Trigger emergency batch recall or request a recall.
      */
     const recallBatch = asyncHandler(async (req, res) => {
         const actor = requireActor(req);
-        const data = await service.emergencyRecall(req.params.batchId, actor);
+        let data;
+        
+        if (actor.role === "Manufacturer") {
+            data = await service.requestRecall(
+                req.params.batchId, 
+                actor, 
+                req.body.note
+            );
+        } else {
+            data = await service.emergencyRecall(req.params.batchId, actor, req.body.note);
+        }
+        
         return res.status(200).json({ success: true, data });
     });
 
@@ -348,12 +365,80 @@ export const createProductController = (service) => {
         return res.status(200).json({ success: true, data });
     });
 
+    /**
+     * Serve a report image from local storage.
+     */
+    const getReportImage = asyncHandler(async (req, res) => {
+        const { reportId, type } = req.params;
+        const actor = requireActor(req);
+
+        // Security check: only regulators can view report images
+        if (actor.role !== "Regulator") {
+            throw new HttpException(403, "Only regulators can view report images");
+        }
+
+        const { Report } = await import("../../models/report/report.model.js");
+        const report = await Report.findById(reportId);
+        if (!report) {
+            throw new HttpException(404, "Report not found");
+        }
+
+        // Hierarchy check for LOW level regulators
+        if (actor.regulatorLevel === "LOW" && report.province !== actor.province) {
+            throw new HttpException(403, "Forbidden: Report is outside your province");
+        }
+
+        const meta = type === "paymentBill" ? report.paymentBillMeta : report.additionalImageMeta;
+        if (!meta || !meta.fileName) {
+            throw new HttpException(404, "Image not found for this report");
+        }
+
+        const path = await import("path");
+        const fs = await import("fs/promises");
+        const filePath = path.join(process.cwd(), "uploads", "reports", reportId, `${type}_${meta.fileName}`);
+
+        try {
+            await fs.access(filePath);
+            return res.sendFile(filePath);
+        } catch (err) {
+            throw new HttpException(404, "File not found on disk");
+        }
+    });
+
+    /**
+     * Read a batch by data hash (metadata fingerprint).
+     */
+    const getBatchByHash = asyncHandler(async (req, res) => {
+        const actor = requireActor(req);
+        const data = await service.getBatchByDataHash(req.params.dataHash, actor);
+        return res.status(200).json({ success: true, data });
+    });
+
+    /**
+     * QR Verification for staff (Manufacturers/Distributors)
+     * Decodes the QR image and returns metadata.
+     */
+    const verifyQr = asyncHandler(async (req, res) => {
+        const qrImage = getUploadedImage(req, "image");
+        if (!qrImage) {
+            throw new HttpException(400, "QR image file is required");
+        }
+
+        // Use service to verify QR
+        const data = await service.qrService.verify(qrImage.buffer);
+        return res.status(200).json({ success: true, data });
+    });
+
     return {
         createBatch,
         listBatches,
         readBatch,
+        getBatchByHash,
         readProtectedQr,
         verifyProduct,
+        verifyQr,
+        submitReport,
+        getReportImage,
         bindProtectedQr,
         updateProtectedQrTokenPolicy,
         shipBatch,

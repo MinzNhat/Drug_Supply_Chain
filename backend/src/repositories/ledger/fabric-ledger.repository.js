@@ -31,7 +31,7 @@ export class FabricLedgerRepository extends LedgerRepository {
         await this.fabricGatewayClient.submit(
             actor,
             "CreateBatchWithExpiry",
-            [batchID, drugName, String(quantity), expiryDate],
+            [batchID, drugName, String(quantity), expiryDate, String(actor.id)],
             actor.traceId,
         );
 
@@ -84,6 +84,7 @@ export class FabricLedgerRepository extends LedgerRepository {
 
         const batch = parseVerifyBatchPayload(payload);
         await syncBatchSnapshot(batch);
+
         return {
             batch,
             safetyStatus: resolveSafetyStatus(batch.status),
@@ -129,6 +130,20 @@ export class FabricLedgerRepository extends LedgerRepository {
         return parseProtectedQrPayload(payload);
     }
 
+    /** Read anchored protected QR state for one batch. */
+    async readProtectedQr(actor, batchID) {
+        ensureActor(actor);
+
+        const payload = await this.fabricGatewayClient.evaluate(
+            actor,
+            "ReadProtectedQR",
+            [batchID],
+            actor.traceId,
+        );
+
+        return parseProtectedQrPayload(payload);
+    }
+
     /** Record one protected-QR verification event to ledger. */
     async recordProtectedQrVerification(
         actor,
@@ -154,13 +169,33 @@ export class FabricLedgerRepository extends LedgerRepository {
         return parseProtectedQrPayload(payload);
     }
 
+    /** Apply protected QR token policy action for one batch. */
+    async updateProtectedQrTokenPolicy(actor, batchID, input) {
+        ensureActor(actor);
+
+        const payload = await this.fabricGatewayClient.submit(
+            actor,
+            "UpdateProtectedQRTokenPolicy",
+            [
+                requireString(batchID, "batchID"),
+                requireString(input.actionType, "actionType"),
+                requireString(input.tokenDigest, "tokenDigest"),
+                input.reason ?? "",
+                input.note ?? "",
+            ],
+            actor.traceId,
+        );
+
+        return parseProtectedQrPayload(payload);
+    }
+
     /** Put batch into in-transit state toward receiver MSP. */
-    async shipBatch(actor, batchID, receiverMSP) {
+    async shipBatch(actor, batchID, receiverMSP, receiverUnitId = "", targetOwnerId = "") {
         ensureActor(actor);
         const payload = await this.fabricGatewayClient.submit(
             actor,
             "ShipBatch",
-            [batchID, receiverMSP],
+            [batchID, receiverMSP, actor.distributorUnitId || "", receiverUnitId, targetOwnerId],
             actor.traceId,
         );
         const batch = parseBatchPayload(payload);
@@ -174,6 +209,20 @@ export class FabricLedgerRepository extends LedgerRepository {
         const payload = await this.fabricGatewayClient.submit(
             actor,
             "ReceiveBatch",
+            [batchID, actor.distributorUnitId || "", String(actor.id)],
+            actor.traceId,
+        );
+        const batch = parseBatchPayload(payload);
+        await syncBatchSnapshot(batch);
+        return batch;
+    }
+
+    /** Confirm delivery to consumption point before scan count can grow. */
+    async confirmDeliveredToConsumption(actor, batchID) {
+        ensureActor(actor);
+        const payload = await this.fabricGatewayClient.submit(
+            actor,
+            "ConfirmDeliveredToConsumption",
             [batchID],
             actor.traceId,
         );
@@ -211,8 +260,8 @@ export class FabricLedgerRepository extends LedgerRepository {
     }
 
     /** Resolve batch by protected-QR data hash via index lookup and ledger read. */
-    async getBatchByDataHash(dataHash) {
-        const index = await requireBatchIndexByDataHash(dataHash);
+    async getBatchByDataHash(dataHash, token = "") {
+        const index = await requireBatchIndexByDataHash(dataHash, token);
 
         const actor = toPublicScanActor();
         const batch = await this.readBatch(actor, index.batchID);

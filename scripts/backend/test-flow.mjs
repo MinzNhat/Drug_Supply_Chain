@@ -282,12 +282,55 @@ const run = async () => {
     }
 
     const thresholdQrB64 = thresholdCreateRes.data?.data?.qrImageBase64 ?? "";
+    const thresholdBatchId =
+        thresholdCreateRes.data?.data?.batch?.batchID ?? "";
     const thresholdQrPath = path.join(TMP_DIR, "qr-threshold.png");
     if (thresholdQrB64) {
         fs.writeFileSync(
             thresholdQrPath,
             Buffer.from(thresholdQrB64, "base64"),
         );
+    }
+
+    if (thresholdBatchId) {
+        const thresholdShipRes = await postWithAuth(
+            `/batches/${thresholdBatchId}/ship`,
+            { targetOwnerMSP: "DistributorMSP" },
+            manuToken,
+        );
+        if (thresholdShipRes.status === 200) {
+            logPass("Threshold batch ship before verification loop");
+        } else {
+            logFail(
+                `Threshold batch ship before verification loop -> HTTP ${thresholdShipRes.status}`,
+            );
+        }
+
+        const thresholdReceiveRes = await postWithAuth(
+            `/batches/${thresholdBatchId}/receive`,
+            {},
+            distToken,
+        );
+        if (thresholdReceiveRes.status === 200) {
+            logPass("Threshold batch receive before verification loop");
+        } else {
+            logFail(
+                `Threshold batch receive before verification loop -> HTTP ${thresholdReceiveRes.status}`,
+            );
+        }
+
+        const thresholdConfirmRes = await postWithAuth(
+            `/batches/${thresholdBatchId}/confirm-delivered-to-consumption`,
+            {},
+            distToken,
+        );
+        if (thresholdConfirmRes.status === 200) {
+            logPass("Threshold batch confirm delivered to consumption");
+        } else {
+            logFail(
+                `Threshold batch confirm delivered to consumption -> HTTP ${thresholdConfirmRes.status}`,
+            );
+        }
     }
 
     if (thresholdQrB64) {

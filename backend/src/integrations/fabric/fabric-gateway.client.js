@@ -4,8 +4,10 @@ import crypto from "crypto";
 import fs from "fs/promises";
 import path from "path";
 import { config } from "../../config/index.js";
+import { recordFabricIdentityLink } from "../../repositories/fabric/fabric-identity-link.repository.js";
 import { HttpException } from "../../utils/http-exception/http-exception.js";
 import { logger } from "../../utils/logger/logger.js";
+import { resolveFabricIdentityReference } from "./fabric-identity-resolver.js";
 import {
     isRetriableFabricError,
     translateFabricError,
@@ -71,31 +73,6 @@ const readPem = async (inputPath, fieldName) => {
     }
 
     return fs.readFile(path.join(absolutePath, firstFile));
-};
-
-/**
- * Validate and normalize actor role accepted by Fabric gateway sessions.
- *
- * @param {{ role?: string }} actor - Actor context attached to request.
- * @returns {"Manufacturer" | "Distributor" | "Regulator"} Canonical role.
- */
-const normalizeRole = (actor) => {
-    if (!actor?.role) {
-        throw new HttpException(401, "UNAUTHORIZED", "Missing actor role");
-    }
-
-    if (!["Manufacturer", "Distributor", "Regulator"].includes(actor.role)) {
-        throw new HttpException(
-            400,
-            "INVALID_ACTOR_ROLE",
-            "Unsupported actor role",
-            {
-                role: actor.role,
-            },
-        );
-    }
-
-    return actor.role;
 };
 
 /**
@@ -197,8 +174,8 @@ export class FabricGatewayClient {
             );
         }
 
-        const role = normalizeRole(actor);
-        const session = await this.#getSession(role);
+        const identityRef = resolveFabricIdentityReference(actor, config.fabric);
+        const session = await this.#getSession(identityRef);
 
         const retryConfig =
             mode === "evaluate"
@@ -216,52 +193,124 @@ export class FabricGatewayClient {
         };
 
         try {
-            return await withRetry({
+            const result = await withRetry({
                 runner: executeTransaction,
                 maxAttempts: Math.max(1, retryConfig.maxAttempts),
                 baseDelayMs: Math.max(10, retryConfig.baseDelayMs),
                 maxDelayMs: Math.max(50, retryConfig.maxDelayMs),
                 shouldRetry: isRetriableFabricError,
             });
+
+            await recordFabricIdentityLink({
+                traceId,
+                actor: {
+                    userId: actor?.id || actor?.userId || "",
+                    role: actor?.role || "",
+                    mspId: actor?.mspId || "",
+                    distributorUnitId: actor?.distributorUnitId || "",
+                },
+                fabricIdentity: {
+                    sessionKey: identityRef.sessionKey,
+                    label: identityRef.identityLabel,
+                    source: identityRef.source,
+                    role: identityRef.role,
+                    mspId: identityRef.mspId,
+                    peerEndpoint: identityRef.peerEndpoint,
+                    peerHostAlias: identityRef.peerHostAlias,
+                    certPath: identityRef.certPath,
+                    keyPath: identityRef.keyPath,
+                },
+                network: {
+                    channelName: config.fabric.channelName,
+                    chaincodeName: config.fabric.chaincodeName,
+                },
+                transaction: {
+                    name: transactionName,
+                    mode,
+                    status: "SUCCESS",
+                    errorCode: "",
+                    errorMessage: "",
+                },
+                occurredAt: new Date(),
+            });
+
+            return result;
         } catch (error) {
-            throw translateFabricError(error, {
+            const translated = translateFabricError(error, {
                 transactionName,
                 mode,
                 traceId,
             });
+
+            await recordFabricIdentityLink({
+                traceId,
+                actor: {
+                    userId: actor?.id || actor?.userId || "",
+                    role: actor?.role || "",
+                    mspId: actor?.mspId || "",
+                    distributorUnitId: actor?.distributorUnitId || "",
+                },
+                fabricIdentity: {
+                    sessionKey: identityRef.sessionKey,
+                    label: identityRef.identityLabel,
+                    source: identityRef.source,
+                    role: identityRef.role,
+                    mspId: identityRef.mspId,
+                    peerEndpoint: identityRef.peerEndpoint,
+                    peerHostAlias: identityRef.peerHostAlias,
+                    certPath: identityRef.certPath,
+                    keyPath: identityRef.keyPath,
+                },
+                network: {
+                    channelName: config.fabric.channelName,
+                    chaincodeName: config.fabric.chaincodeName,
+                },
+                transaction: {
+                    name: transactionName,
+                    mode,
+                    status: "FAILED",
+                    errorCode: translated.code || "",
+                    errorMessage: translated.message || "",
+                },
+                occurredAt: new Date(),
+            });
+
+            throw translated;
         }
     }
 
     /**
-     * Get or lazily create one Fabric gateway session per actor role.
+     * Get or lazily create one Fabric gateway session per resolved identity reference.
      */
-    async #getSession(role) {
-        if (this.sessions.has(role)) {
-            return this.sessions.get(role);
+    async #getSession(identityRef) {
+        if (this.sessions.has(identityRef.sessionKey)) {
+            return this.sessions.get(identityRef.sessionKey);
         }
 
-        const org = config.fabric.organizations[role];
-        if (!org) {
+        if (!identityRef?.certPath || !identityRef?.keyPath) {
             throw new HttpException(
                 500,
                 "FABRIC_CONFIG_ERROR",
-                `Missing Fabric org config for role ${role}`,
+                `Missing Fabric identity credentials for ${identityRef?.identityLabel || "unknown identity"}`,
             );
         }
 
         const [tlsCertPem, certPem, keyPem] = await Promise.all([
-            readPem(org.tlsCertPath, `${role}.tlsCertPath`),
-            readPem(org.certPath, `${role}.certPath`),
-            readPem(org.keyPath, `${role}.keyPath`),
+            readPem(
+                identityRef.tlsCertPath,
+                `${identityRef.identityLabel}.tlsCertPath`,
+            ),
+            readPem(identityRef.certPath, `${identityRef.identityLabel}.certPath`),
+            readPem(identityRef.keyPath, `${identityRef.identityLabel}.keyPath`),
         ]);
 
         const tlsCredentials = grpc.credentials.createSsl(tlsCertPem);
-        const client = new grpc.Client(org.peerEndpoint, tlsCredentials, {
-            "grpc.ssl_target_name_override": org.peerHostAlias,
+        const client = new grpc.Client(identityRef.peerEndpoint, tlsCredentials, {
+            "grpc.ssl_target_name_override": identityRef.peerHostAlias,
         });
 
         const identity = {
-            mspId: org.mspId,
+            mspId: identityRef.mspId,
             credentials: certPem,
         };
 
@@ -296,7 +345,7 @@ export class FabricGatewayClient {
             contract,
         };
 
-        this.sessions.set(role, session);
+        this.sessions.set(identityRef.sessionKey, session);
         return session;
     }
 }

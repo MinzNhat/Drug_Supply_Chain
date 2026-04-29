@@ -153,6 +153,8 @@ test("integration: non-regulator role is denied for alert list", async (t) => {
     const body = await response.json();
     assert.equal(body.success, false);
     assert.equal(body.error.code, "FORBIDDEN");
+    assert.equal(typeof body.error.traceId, "string");
+    assert.ok(body.error.traceId.length > 0);
     assert.equal(called, false);
 });
 

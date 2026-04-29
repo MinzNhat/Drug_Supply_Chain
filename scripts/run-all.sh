@@ -3,6 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BLOCKCHAIN_SCRIPT_DIR="${ROOT_DIR}/scripts/blockchain"
+
+# Ensure Fabric binaries are in PATH
+export PATH="${ROOT_DIR}/blockchain/bin:${ROOT_DIR}/blockchain/test-network/bin:${PATH}"
+export FABRIC_CFG_PATH="${ROOT_DIR}/blockchain/config"
+
 ADD_ORG3_DIR="${ROOT_DIR}/blockchain/test-network/addOrg3"
 COMPOSE_FILE="${ROOT_DIR}/docker-compose.yml"
 MODE="${1:-full}"
@@ -31,6 +36,7 @@ Modes:
     full    Run up then runtime E2E, geo-flow E2E, transfer-batch E2E, transfer negative-path E2E, and AI edge-path E2E.
   down    Stop app services and tear down Fabric network.
   status  Print app and Fabric container status.
+  setup-admin Create initial admin and high-level regulator users.
 
 Optional environment variables:
   STACK_CHANNEL_NAME=mychannel
@@ -167,9 +173,9 @@ run_up() {
     fi
 
     if [[ "${STACK_BUILD_IMAGES}" == "true" ]]; then
-        compose_cmd up -d --build mongo qr-python-core qr-service ai-python-core ai-service backend
+        compose_cmd up -d --build mongo ipfs qr-python-core qr-service ai-python-core ai-service backend
     else
-        compose_cmd up -d mongo qr-python-core qr-service ai-python-core ai-service backend
+        compose_cmd up -d mongo ipfs qr-python-core qr-service ai-python-core ai-service backend
     fi
 
     wait_for_http "http://localhost:8080/health" 80 2
@@ -285,6 +291,10 @@ main() {
             ;;
         status)
             run_status
+            ;;
+        setup-admin)
+            echo "Setting up initial admin users..."
+            docker exec drug-guard-backend node /app/scripts/create-admin.mjs
             ;;
         *)
             echo "Unknown mode: ${MODE}"

@@ -17,19 +17,6 @@ class DrugTrackerContract extends Contract {
     }
 
     /**
-     * Create a batch without expiry date.
-     */
-    async CreateBatch(ctx, batchID, drugName, quantityStr) {
-        return batchService.createBatch(
-            ctx,
-            batchID,
-            drugName,
-            quantityStr,
-            "",
-        );
-    }
-
-    /**
      * Create a batch with expiry date validation.
      */
     async CreateBatchWithExpiry(
@@ -38,6 +25,7 @@ class DrugTrackerContract extends Contract {
         drugName,
         quantityStr,
         expiryDate,
+        ownerId,
     ) {
         return batchService.createBatch(
             ctx,
@@ -45,6 +33,7 @@ class DrugTrackerContract extends Contract {
             drugName,
             quantityStr,
             expiryDate,
+            ownerId,
         );
     }
 
@@ -53,6 +42,13 @@ class DrugTrackerContract extends Contract {
      */
     async VerifyBatch(ctx, batchID) {
         return batchService.verifyBatch(ctx, batchID);
+    }
+
+    /**
+     * Confirm delivery to consumption point before public scan count growth.
+     */
+    async ConfirmDeliveredToConsumption(ctx, batchID) {
+        return batchService.confirmDeliveredToConsumption(ctx, batchID);
     }
 
     /**
@@ -128,15 +124,22 @@ class DrugTrackerContract extends Contract {
     /**
      * Mark batch transfer to another owner MSP.
      */
-    async ShipBatch(ctx, batchID, receiverMSP) {
-        return transferService.shipBatch(ctx, batchID, receiverMSP);
+    async ShipBatch(ctx, batchID, receiverMSP, senderUnitId, receiverUnitId, targetOwnerId) {
+        return transferService.shipBatch(
+            ctx,
+            batchID,
+            receiverMSP,
+            senderUnitId,
+            receiverUnitId,
+            targetOwnerId,
+        );
     }
 
     /**
      * Confirm receipt of an in-transit batch by target owner MSP.
      */
-    async ReceiveBatch(ctx, batchID) {
-        return transferService.receiveBatch(ctx, batchID);
+    async ReceiveBatch(ctx, batchID, receiverUnitId, receiverId) {
+        return transferService.receiveBatch(ctx, batchID, receiverUnitId, receiverId);
     }
 
     /**

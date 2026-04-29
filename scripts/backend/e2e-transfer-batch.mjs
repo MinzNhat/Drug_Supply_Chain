@@ -12,7 +12,11 @@ const request = createE2eRequest();
 const run = async () => {
     const now = Date.now();
     const manufacturerUsername = `manu_transfer_${now}`;
-    const distributorUsername = `dist_transfer_${now}`;
+    const distributorAUsername = `dist_transfer_a_${now}`;
+    const distributorBUsername = `dist_transfer_b_${now}`;
+
+    const distributorUnitA = "dist-unit-a";
+    const distributorUnitB = "dist-unit-b";
 
     await register(
         request,
@@ -22,13 +26,22 @@ const run = async () => {
     );
     await register(
         request,
-        distributorUsername,
+        distributorAUsername,
         "Distributor",
         "DistributorMSP",
+        distributorUnitA,
+    );
+    await register(
+        request,
+        distributorBUsername,
+        "Distributor",
+        "DistributorMSP",
+        distributorUnitB,
     );
 
     const manufacturerToken = await login(request, manufacturerUsername);
-    const distributorToken = await login(request, distributorUsername);
+    const distributorAToken = await login(request, distributorAUsername);
+    const distributorBToken = await login(request, distributorBUsername);
 
     const createResponse = await request.post(
         "/batches",
@@ -52,6 +65,7 @@ const run = async () => {
         `/batches/${batchId}/ship`,
         {
             targetOwnerMSP: "DistributorMSP",
+            targetDistributorUnitId: distributorUnitA,
         },
         {
             headers: authHeader(manufacturerToken),
@@ -61,24 +75,63 @@ const run = async () => {
 
     const receiveResponse = await request.post(
         `/batches/${batchId}/receive`,
-        {},
         {
-            headers: authHeader(distributorToken),
+            receiverUnitId: distributorUnitA,
+        },
+        {
+            headers: authHeader(distributorAToken),
         },
     );
     assertStatus("receive batch", receiveResponse, 200);
 
+    const crossUnitShipResponse = await request.post(
+        `/batches/${batchId}/ship`,
+        {
+            targetOwnerMSP: "DistributorMSP",
+            targetDistributorUnitId: distributorUnitB,
+        },
+        {
+            headers: authHeader(distributorAToken),
+        },
+    );
+    assertStatus("cross-unit ship", crossUnitShipResponse, 200);
+
+    const crossUnitReceiveResponse = await request.post(
+        `/batches/${batchId}/receive`,
+        {
+            receiverUnitId: distributorUnitB,
+        },
+        {
+            headers: authHeader(distributorBToken),
+        },
+    );
+    assertStatus("cross-unit receive", crossUnitReceiveResponse, 200);
+
     const readResponse = await request.get(`/batches/${batchId}`, {
-        headers: authHeader(distributorToken),
+        headers: authHeader(distributorBToken),
     });
     assertStatus("read batch", readResponse, 200);
 
     const ownerMSP = readResponse.data?.data?.ownerMSP;
+    const ownerUnitId = readResponse.data?.data?.ownerUnitId;
     const transferStatus = readResponse.data?.data?.transferStatus;
-    if (ownerMSP !== "DistributorMSP" || transferStatus !== "NONE") {
+    const transferHistory = Array.isArray(readResponse.data?.data?.transferHistory)
+        ? readResponse.data.data.transferHistory
+        : [];
+    const lastTransfer = transferHistory[transferHistory.length - 1] || {};
+
+    if (
+        ownerMSP !== "DistributorMSP" ||
+        ownerUnitId !== distributorUnitB ||
+        transferStatus !== "NONE" ||
+        lastTransfer.fromUnitId !== distributorUnitA ||
+        lastTransfer.toUnitId !== distributorUnitB
+    ) {
         fail("ownership transfer state mismatch", {
             ownerMSP,
+            ownerUnitId,
             transferStatus,
+            lastTransfer,
         });
     }
 
@@ -89,7 +142,9 @@ const run = async () => {
                 batchId,
                 shippedTo: "DistributorMSP",
                 ownerMSP,
+                ownerUnitId,
                 transferStatus,
+                lastTransfer,
             },
             null,
             2,

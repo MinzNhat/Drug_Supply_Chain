@@ -32,6 +32,7 @@ const start = async () => {
 };
 
 start().catch((err) => {
-    logger.error({ message: "Failed to start service", err });
+    logger.error({ message: "Failed to start service", error: err.message, stack: err.stack });
+    console.error("Critical failure during startup:", err);
     process.exit(1);
 });

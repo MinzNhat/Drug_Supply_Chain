@@ -18,7 +18,7 @@ INSTALL_ORGS="${INSTALL_ORGS:-}"
 COMMIT_ORGS="${COMMIT_ORGS:-${REGULATOR_ORG:-1}}"
 REGULATOR_ORG="${REGULATOR_ORG:-1}"
 ORDERER_ENDPOINT="${ORDERER_ENDPOINT:-localhost:7050}"
-ORDERER_TLS_HOST="${ORDERER_TLS_HOST:-orderer.example.com}"
+ORDERER_TLS_HOST="${ORDERER_TLS_HOST:-orderer1.drugguard.vn}"
 INIT_REQUIRED="${INIT_REQUIRED:-false}"
 SIGNATURE_POLICY="${SIGNATURE_POLICY:-}"
 OPTIONAL_ARGS=()
@@ -39,7 +39,7 @@ Optional environment variables:
   COMMIT_ORGS        (default: REGULATOR_ORG)
   REGULATOR_ORG      (default: 1)
   ORDERER_ENDPOINT   (default: localhost:7050)
-  ORDERER_TLS_HOST   (default: orderer.example.com)
+  ORDERER_TLS_HOST   (default: orderer1.drugguard.vn)
   INIT_REQUIRED      (default: false)
   SIGNATURE_POLICY   (optional, e.g. OR('RegulatorMSP.admin'))
 
@@ -67,7 +67,10 @@ detect_install_orgs() {
   local detected=()
 
   for org in 1 2 3; do
-    if [[ -d "${TEST_NETWORK_HOME}/organizations/peerOrganizations/org${org}.example.com/peers/peer0.org${org}.example.com" ]]; then
+    local org_slug=""
+    if [ $org -eq 1 ]; then org_slug="regulator"; elif [ $org -eq 2 ]; then org_slug="manufacturer"; else org_slug="distributor"; fi
+    
+    if [[ -d "${TEST_NETWORK_HOME}/organizations/peerOrganizations/${org_slug}.drugguard.vn/peers/peer0.${org_slug}.drugguard.vn" ]]; then
       detected+=("${org}")
     fi
   done

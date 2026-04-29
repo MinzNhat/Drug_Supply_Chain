@@ -1,46 +1,41 @@
 # Documentation Index
 
-This repository uses a centralized documentation structure under `docs/`.
+Centralized technical documentation for the Drug Guard supply-chain platform.
 
 ## Platform
 
-- `docs/platform/flow-conformance-matrix.md`
-- `docs/platform/deployment-readiness.md`
-- `docs/platform/nationwide-readiness-checklist.md`
-- `docs/platform/project-audit-gap-checklist.md`
-- `docs/platform/secret-management.md`
+| File | Description |
+| ---- | ----------- |
+| [`platform/flow-conformance-matrix.md`](platform/flow-conformance-matrix.md) | Maps every supply-chain diagram step to its implementation and status |
+| [`platform/unified-api-inventory.md`](platform/unified-api-inventory.md) | Registry of all public and internal API endpoints across all services |
 
 ## Backend
 
-- `docs/backend/supply-chain-api.md`
-- `docs/backend/integration-contract.md`
-- `docs/backend/environment-variables.md`
-- `docs/backend/fabric-profile-migration.md`
-- `docs/backend/conventions.md`
-- `docs/backend/runbook-local-e2e.md`
+| File | Description |
+| ---- | ----------- |
+| [`backend/integration-contract.md`](backend/integration-contract.md) | Endpoint-to-chaincode mapping, decision contracts, and error/naming policy |
+| [`backend/supply-chain-api.md`](backend/supply-chain-api.md) | Detailed request/response schema for every supply-chain API endpoint |
+| [`backend/environment-variables.md`](backend/environment-variables.md) | All backend environment variables with type, default, and required status |
 
 ## Blockchain
 
-- `docs/blockchain/blockchain-overview.md`
-- `docs/blockchain/asset-transfer-drug-overview.md`
-- `docs/blockchain/asset-transfer-drug-architecture-and-dev-guide.md`
-- `docs/blockchain/test-network-overview.md`
-- `docs/blockchain/chaincode-as-a-service-tutorial.md`
-- `docs/blockchain/add-org3-guide.md`
-- `docs/blockchain/prometheus-grafana-guide.md`
+| File | Description |
+| ---- | ----------- |
+| [`blockchain/blockchain-overview.md`](blockchain/blockchain-overview.md) | Fabric network topology, MSP identity model, and operational lifecycle |
+| [`blockchain/asset-transfer-drug-architecture-and-dev-guide.md`](blockchain/asset-transfer-drug-architecture-and-dev-guide.md) | Chaincode architecture, contract methods, and local development guide |
 
-## Protected QR
+## Protected QR Service
 
-- `docs/protected-qr/service-overview.md`
-- `docs/protected-qr/swagger.yaml`
+| File | Description |
+| ---- | ----------- |
+| [`protected-qr/service-overview.md`](protected-qr/service-overview.md) | QR generation/verification architecture, token format, and confidence policy |
+| [`protected-qr/swagger.yaml`](protected-qr/swagger.yaml) | OpenAPI 3 spec for Protected QR Node API |
+| [`protected-qr/README-DO-AN-PROTECTED-QR.md`](protected-qr/README-DO-AN-PROTECTED-QR.md) | Project-specific deep-dive into the Protected QR module |
 
-## AI Service
+## AI Verification Service
 
-- `docs/ai-service/service-overview.md`
-- `docs/ai-service/swagger.yaml`
-- `ai-service/README.md`
-
-## Legal
-
-- `docs/legal/blockchain-license.txt`
-- `docs/legal/protected-qr-license.txt`
+| File | Description |
+| ---- | ----------- |
+| [`ai-service/service-overview.md`](ai-service/service-overview.md) | YOLO inference pipeline, decision thresholds, and integration contract |
+| [`ai-service/swagger.yaml`](ai-service/swagger.yaml) | OpenAPI 3 spec for AI Service Node gateway |
+| [`ai-service/README-DO-AN-AI-SERVICE.md`](ai-service/README-DO-AN-AI-SERVICE.md) | Project-specific deep-dive into the AI verification module |

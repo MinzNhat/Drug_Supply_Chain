@@ -9,6 +9,19 @@ import type {
     VerifyQrOutput,
 } from "./qr.types.js";
 
+type PythonGenerateResponse = {
+    qr_image_base64?: unknown;
+    qrImageBase64?: unknown;
+};
+
+type PythonVerifyResponse = {
+    token?: unknown;
+    is_authentic?: unknown;
+    isAuthentic?: unknown;
+    confidence_score?: unknown;
+    confidenceScore?: unknown;
+};
+
 /**
  * Service layer for protected QR generation and verification.
  */
@@ -32,6 +45,51 @@ export class QrService {
         // Use dedicated collections for auditability and verification history.
         this.auditCollection = db.collection("qr_audit");
         this.verifyCollection = db.collection("qr_verify_logs");
+    }
+
+    /**
+     * Normalize python-core generate payload into API contract shape.
+     */
+    private mapPythonGenerateResponse(
+        payload: PythonGenerateResponse | null | undefined,
+    ): Pick<GenerateQrOutput, "qrImageBase64"> {
+        const qrImageBase64 =
+            typeof payload?.qr_image_base64 === "string"
+                ? payload.qr_image_base64
+                : typeof payload?.qrImageBase64 === "string"
+                  ? payload.qrImageBase64
+                  : "";
+
+        return { qrImageBase64 };
+    }
+
+    /**
+     * Normalize python-core verify payload into API contract shape.
+     */
+    private mapPythonVerifyResponse(
+        payload: PythonVerifyResponse | null | undefined,
+    ): Pick<VerifyQrOutput, "token" | "isAuthentic" | "confidenceScore"> {
+        const confidenceRaw =
+            typeof payload?.confidence_score === "number"
+                ? payload.confidence_score
+                : typeof payload?.confidenceScore === "number"
+                  ? payload.confidenceScore
+                  : 0;
+
+        const isAuthenticRaw =
+            typeof payload?.is_authentic === "boolean"
+                ? payload.is_authentic
+                : typeof payload?.isAuthentic === "boolean"
+                  ? payload.isAuthentic
+                  : false;
+
+        return {
+            token: typeof payload?.token === "string" ? payload.token : null,
+            isAuthentic: Boolean(isAuthenticRaw),
+            confidenceScore: Number.isFinite(confidenceRaw)
+                ? Number(confidenceRaw)
+                : 0,
+        };
     }
 
     /**
@@ -92,7 +150,7 @@ export class QrService {
             { timeout: config.requestTimeoutMs },
         );
 
-        const qrImageBase64 = pythonRes.data?.qr_image_base64;
+        const mappedGenerate = this.mapPythonGenerateResponse(pythonRes.data);
 
         // Persist audit metadata for traceability and compliance.
         await this.auditCollection.insertOne({
@@ -106,7 +164,7 @@ export class QrService {
 
         return {
             token,
-            qrImageBase64,
+            qrImageBase64: mappedGenerate.qrImageBase64,
         };
     }
 
@@ -121,12 +179,12 @@ export class QrService {
             { timeout: config.requestTimeoutMs },
         );
 
-        const rawToken = pythonRes.data?.token ?? null;
+        const mappedVerify = this.mapPythonVerifyResponse(pythonRes.data);
+        const rawToken = mappedVerify.token;
         const token =
             rawToken && this.isTokenSignatureValid(rawToken) ? rawToken : null;
-        const confidenceScore = Number(pythonRes.data?.confidence_score ?? 0);
-        const isAuthentic =
-            Boolean(pythonRes.data?.is_authentic) && Boolean(token);
+        const confidenceScore = mappedVerify.confidenceScore;
+        const isAuthentic = mappedVerify.isAuthentic && Boolean(token);
         const decodedMeta = token ? this.decodeToken(token) : null;
 
         // Store verification results for audit trails.

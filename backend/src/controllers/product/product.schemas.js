@@ -28,13 +28,20 @@ export const createBatchSchema = z.object({
  */
 export const shipBatchSchema = z.object({
     targetOwnerMSP: z.string().min(1),
+    targetDistributorUnitId: z.string().optional(),
 });
 
 /**
- * Request schema for updating document metadata.
+ * Base request schema for updating document metadata.
  */
-export const updateDocumentSchema = z.object({
+export const updateDocumentBaseSchema = z.object({
     docType: z.enum(["packageImage", "qualityCert"]),
+});
+
+/**
+ * Legacy request schema for CID-only document update.
+ */
+export const updateDocumentCidSchema = updateDocumentBaseSchema.extend({
     newCID: z
         .string()
         .min(10)
@@ -64,6 +71,7 @@ export const recordBatchEventSchema = z.object({
     lng: z.coerce.number().min(-180).max(180),
     accuracyM: z.coerce.number().min(0).max(10000).optional(),
     address: z.string().max(300).optional(),
+    province: z.string().max(100).optional(),
     note: z.string().max(500).optional(),
     occurredAt: z.string().datetime().optional(),
     metadata: z.record(z.unknown()).optional(),
@@ -115,3 +123,23 @@ export const bindProtectedQrSchema = z
         message: "tokenDigest or token is required",
         path: ["tokenDigest"],
     });
+
+/**
+ * Request schema for protected QR token policy lifecycle updates.
+ */
+export const protectedQrTokenPolicySchema = z
+    .object({
+        actionType: z.enum(["BLOCKLIST", "REVOKE", "RESTORE"]),
+        tokenDigest: z.string().regex(/^[0-9a-f]{64}$/i),
+        reason: z.string().min(1).max(300).optional(),
+        note: z.string().max(500).optional(),
+    })
+    .refine(
+        (value) =>
+            value.actionType === "RESTORE" ||
+            (typeof value.reason === "string" && value.reason.trim().length > 0),
+        {
+            message: "reason is required for BLOCKLIST and REVOKE",
+            path: ["reason"],
+        },
+    );

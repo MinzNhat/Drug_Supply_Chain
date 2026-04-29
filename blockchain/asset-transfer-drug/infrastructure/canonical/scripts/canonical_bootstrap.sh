@@ -67,7 +67,7 @@ generate_crypto() {
 }
 
 ensure_crypto() {
-  local consenter_cert="${ORGANIZATIONS_DIR}/ordererOrganizations/regulator.example.com/orderers/orderer0.regulator.example.com/tls/server.crt"
+  local consenter_cert="${ORGANIZATIONS_DIR}/ordererOrganizations/regulator.drugguard.vn/orderers/orderer0.regulator.drugguard.vn/tls/server.crt"
   if [[ ! -f "${consenter_cert}" ]]; then
     echo "Crypto material missing, running generate-crypto..."
     generate_crypto

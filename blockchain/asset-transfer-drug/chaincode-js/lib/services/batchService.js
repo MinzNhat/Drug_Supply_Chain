@@ -3,12 +3,15 @@
 const {
     getClientMSP,
     isCanonicalMSP,
+    sameMSP,
     toCanonicalMSP,
 } = require("../helpers/identity");
+
 const {
     normalizeExpiryDate,
     requireNonEmptyString,
 } = require("../helpers/validation");
+
 const {
     batchExists,
     getBatchOrThrow,
@@ -16,10 +19,10 @@ const {
 } = require("../repositories/batchRepository");
 
 /**
- * evaluateRisk is a helper function that determines the risk level of a batch based on its status and scan count. It categorizes batches into "DANGER_RECALLED", "DANGER_FAKE", "WARNING", or "SAFE" based on predefined criteria.
+ * Determine the risk classification of a batch based on its status and scan count.
  *
- * @param {Object} batch - The batch object containing the status and scan count information.
- * @returns {string} The risk level of the batch, which can be "DANGER_RECALLED", "DANGER_FAKE", "WARNING", or "SAFE".
+ * @param {Object} batch - Ledger batch object.
+ * @returns {string} Risk level: "DANGER_RECALLED" | "DANGER_FAKE" | "WARNING" | "SAFE".
  */
 function evaluateRisk(batch) {
     if (batch.status === "RECALLED") {
@@ -41,27 +44,29 @@ function evaluateRisk(batch) {
 }
 
 /**
- * buildDefaultBatch is a helper function that constructs a new batch object with default values based on the provided parameters. It initializes the batch with the given batch ID, drug name, owner MSP, quantity, and expiry date, while also setting default values for other fields such as scan count, status, and document information.
+ * Construct a default batch object for ledger initialization.
  *
- * @param {string} batchID - The unique identifier for the batch.
- * @param {string} drugName - The name of the drug contained in the batch.
- * @param {string} ownerMSP - The MSP ID of the owner of the batch.
- * @param {number} quantity - The total supply quantity of the batch.
- * @param {string} expiryDate - The expiry date of the batch in ISO format.
- * @returns {Object} A new batch object initialized with the provided parameters and default values.
+ * @param {string} batchID - Unique batch identifier.
+ * @param {string} drugName - Drug name.
+ * @param {string} ownerMSP - Manufacturing org MSP.
+ * @param {number} quantity - Total supply quantity.
+ * @param {string} expiryDate - ISO expiry date.
+ * @returns {Object} Initialized batch object.
  */
-function buildDefaultBatch(batchID, drugName, ownerMSP, quantity, expiryDate) {
+function buildDefaultBatch(batchID, drugName, ownerMSP, quantity, expiryDate, ownerId) {
     return {
         docType: "batch",
         batchID,
         drugName,
         manufacturerMSP: ownerMSP,
+        manufacturerId: ownerId, // Creator is the first owner
         ownerMSP,
+        ownerId,
         expiryDate,
         totalSupply: quantity,
         scanCount: 0,
-        warningThreshold: Math.ceil(quantity * 1.05),
-        suspiciousThreshold: Math.ceil(quantity * 1.1),
+        warningThreshold: Math.max(50, Math.ceil(quantity * 1.05)),
+        suspiciousThreshold: Math.max(100, Math.ceil(quantity * 1.1)),
         status: "ACTIVE",
         documents: {
             packageImage: {
@@ -78,23 +83,29 @@ function buildDefaultBatch(batchID, drugName, ownerMSP, quantity, expiryDate) {
             },
         },
         targetOwnerMSP: "",
+        targetOwnerId: "",
+        ownerUnitId: "",
+        targetOwnerUnitId: "",
+        consumptionConfirmed: false,
+        consumptionConfirmedAt: "",
+        consumptionConfirmedByMSP: "",
         transferStatus: "NONE",
         transferHistory: [],
     };
 }
 
 /**
- * createBatch allows a user with the ManufacturerMSP role to create a new batch on the ledger. It validates the input parameters, checks for the existence of a batch with the same ID, and initializes the batch with default values before storing it in the ledger.
+ * Create a new batch on the ledger (ManufacturerMSP only).
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state and client identity.
- * @param {string} batchID - The unique identifier for the new batch.
- * @param {string} drugName - The name of the drug contained in the batch.
- * @param {string} quantityStr - The total supply quantity of the batch as a string, which will be parsed into a number.
- * @param {string} expiryDate - The expiry date of the batch in ISO format.
- * @returns {string} A JSON string representation of the newly created batch object.
- * @throws Will throw an error if the client is not authorized, if the input parameters are invalid, or if a batch with the same ID already exists.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Unique batch identifier.
+ * @param {string} drugName - Drug name.
+ * @param {string} quantityStr - Total supply as string.
+ * @param {string} expiryDate - ISO expiry date.
+ * @param {string} ownerId - ID of the creating user.
+ * @returns {string} JSON-serialized batch object.
  */
-async function createBatch(ctx, batchID, drugName, quantityStr, expiryDate) {
+async function createBatch(ctx, batchID, drugName, quantityStr, expiryDate, ownerId) {
     const clientOrgID = getClientMSP(ctx);
 
     if (!isCanonicalMSP(clientOrgID, "ManufacturerMSP")) {
@@ -103,6 +114,7 @@ async function createBatch(ctx, batchID, drugName, quantityStr, expiryDate) {
 
     const normalizedBatchID = requireNonEmptyString(batchID, "batchID");
     const normalizedDrugName = requireNonEmptyString(drugName, "drugName");
+    const normalizedOwnerId = requireNonEmptyString(ownerId, "ownerId");
 
     const exists = await batchExists(ctx, normalizedBatchID);
 
@@ -124,6 +136,7 @@ async function createBatch(ctx, batchID, drugName, quantityStr, expiryDate) {
         canonicalOwnerMSP,
         quantity,
         normalizedExpiryDate,
+        normalizedOwnerId,
     );
 
     await putBatch(ctx, normalizedBatchID, batch);
@@ -131,12 +144,11 @@ async function createBatch(ctx, batchID, drugName, quantityStr, expiryDate) {
 }
 
 /**
- * readBatch retrieves a batch from the ledger by its ID and returns it as a JSON string. It uses the getBatchOrThrow helper function to fetch the batch and handle the case where the batch does not exist.
+ * Read one batch from the ledger.
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state.
- * @param {string} batchID - The unique identifier of the batch to retrieve.
- * @returns {string} A JSON string representation of the batch object retrieved from the ledger.
- * @throws Will throw an error if the batch does not exist in the ledger.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @returns {string} JSON-serialized batch object.
  */
 async function readBatch(ctx, batchID) {
     const batch = await getBatchOrThrow(ctx, batchID);
@@ -144,30 +156,40 @@ async function readBatch(ctx, batchID) {
 }
 
 /**
- * verifyBatch is a function that processes a batch verification request. It checks the status of the batch and updates its scan count. If the scan count exceeds certain thresholds, it updates the batch status to "WARNING" or "SUSPICIOUS" and emits corresponding events. Finally, it returns the updated batch information as a JSON string.
+ * Register one scan attempt against a batch and update risk status.
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state.
- * @param {string} batchID - The unique identifier of the batch to verify.
- * @returns {string} A JSON string representation of the updated batch object after verification.
- * @throws Will throw an error if the batch does not exist in the ledger.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @returns {string} JSON-serialized updated batch with verificationResult.
  */
 async function verifyBatch(ctx, batchID) {
     const batch = await getBatchOrThrow(ctx, batchID);
 
     if (batch.status === "RECALLED") {
         return JSON.stringify({
-            result: "DANGER_RECALLED",
-            batchID,
-            status: batch.status,
+            ...batch,
+            verificationResult: "DANGER_RECALLED",
         });
     }
 
     if (batch.status === "SUSPICIOUS") {
         return JSON.stringify({
-            result: "DANGER_FAKE",
-            batchID,
-            status: batch.status,
+            ...batch,
+            verificationResult: "DANGER_FAKE",
         });
+    }
+
+    if (!batch.consumptionConfirmed) {
+        await ctx.stub.setEvent(
+            "GovMonitor",
+            Buffer.from(
+                JSON.stringify({
+                    batchID,
+                    msg: "Scan before consumption delivery confirmation (warning)",
+                    code: "WARN_UNCONFIRMED_CONSUMPTION",
+                }),
+            ),
+        );
     }
 
     batch.scanCount += 1;
@@ -205,16 +227,72 @@ async function verifyBatch(ctx, batchID) {
     }
 
     await putBatch(ctx, batchID, batch);
+    return JSON.stringify({
+        ...batch,
+        verificationResult: evaluateRisk(batch),
+    });
+}
+
+/**
+ * confirmDeliveredToConsumption marks one batch as delivered to consumption point.
+ *
+ * @param {Context} ctx - The transaction context.
+ * @param {string} batchID - Target batch id.
+ * @returns {string} Updated batch state.
+ */
+async function confirmDeliveredToConsumption(ctx, batchID) {
+    const batch = await getBatchOrThrow(ctx, batchID);
+    const clientOrgID = getClientMSP(ctx);
+
+    if (!isCanonicalMSP(clientOrgID, "DistributorMSP")) {
+        throw new Error(
+            "Denied: Only DistributorMSP can confirm delivery to consumption.",
+        );
+    }
+
+    if (!sameMSP(clientOrgID, batch.ownerMSP)) {
+        throw new Error(
+            "Denied: Only current owner can confirm delivery to consumption.",
+        );
+    }
+
+    if (batch.transferStatus !== "NONE") {
+        throw new Error(
+            "Denied: Cannot confirm consumption delivery while batch is in transit.",
+        );
+    }
+
+    if (batch.consumptionConfirmed) {
+        return JSON.stringify(batch);
+    }
+
+    batch.consumptionConfirmed = true;
+    batch.consumptionConfirmedAt = new Date().toISOString();
+    batch.consumptionConfirmedByMSP = toCanonicalMSP(clientOrgID);
+
+    await putBatch(ctx, batchID, batch);
+
+    await ctx.stub.setEvent(
+        "ConsumptionDeliveryConfirmed",
+        Buffer.from(
+            JSON.stringify({
+                batchID,
+                ownerMSP: batch.ownerMSP,
+                confirmedByMSP: batch.consumptionConfirmedByMSP,
+                confirmedAt: batch.consumptionConfirmedAt,
+            }),
+        ),
+    );
+
     return JSON.stringify(batch);
 }
 
 /**
- * evaluateBatchRisk is a function that evaluates the risk level of a batch based on its scan count and thresholds.
+ * Read-only risk evaluation for a batch without mutating ledger state.
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state.
- * @param {string} batchID - The unique identifier of the batch to evaluate.
- * @returns {string} A JSON string representation of the batch's risk evaluation.
- * @throws Will throw an error if the batch does not exist in the ledger.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @returns {string} JSON-serialized risk evaluation payload.
  */
 async function evaluateBatchRisk(ctx, batchID) {
     const batch = await getBatchOrThrow(ctx, batchID);
@@ -233,5 +311,6 @@ module.exports = {
     readBatch,
     createBatch,
     verifyBatch,
+    confirmDeliveredToConsumption,
     evaluateBatchRisk,
 };

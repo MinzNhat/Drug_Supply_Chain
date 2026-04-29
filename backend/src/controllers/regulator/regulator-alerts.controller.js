@@ -69,9 +69,41 @@ export const createRegulatorAlertsController = (service) => {
         return res.status(200).json({ success: true, data });
     });
 
+    /**
+     * List user reports (thuốc thật giả).
+     */
+    const listReports = asyncHandler(async (req, res) => {
+        const actor = requireActor(req);
+        const data = await service.listReports(actor);
+        return res.status(200).json({ success: true, data });
+    });
+
+    /**
+     * Update report status.
+     */
+    const updateReportStatus = asyncHandler(async (req, res) => {
+        const { reportId } = req.params;
+        const { status, note } = req.body;
+        const actor = requireActor(req);
+        const data = await service.updateReportStatus(reportId, status, actor, note);
+        return res.status(200).json({ success: true, data });
+    });
+
+    /**
+     * Unified surveillance view.
+     */
+    const listSurveillance = asyncHandler(async (req, res) => {
+        const actor = requireActor(req);
+        const data = await service.listSurveillance(req.query, actor);
+        return res.status(200).json({ success: true, data });
+    });
+
     return {
         listAlerts,
         getAlertById,
         exportReport,
+        listReports,
+        listSurveillance,
+        updateReportStatus,
     };
 };

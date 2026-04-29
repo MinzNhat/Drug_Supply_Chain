@@ -11,7 +11,7 @@ Reference model: 3 phases from provided supply-chain diagram.
 | Print and attach QR        | Outside system boundary (physical process)                     | Operational process               |
 | Producer signs transaction | Fabric client identity signs submit via Gateway                | Implemented                       |
 | Submit signed data         | Backend submits `CreateBatchWithExpiry` and `BindProtectedQR`  | Implemented                       |
-| Upload metadata/IPFS       | `POST /api/v1/batches/:batchId/documents` updates CID metadata | Implemented (manual CID workflow) |
+| Upload metadata/IPFS       | `POST /api/v1/batches/:batchId/documents` supports legacy CID and direct upload -> CID binding | Implemented |
 | Record on blockchain       | Chaincode stores batch + protected_qr state                    | Implemented                       |
 
 ## Phase 2: Handover And Ownership Transfer
@@ -19,10 +19,11 @@ Reference model: 3 phases from provided supply-chain diagram.
 | Diagram Step                | Current Implementation                                        | Status      |
 | --------------------------- | ------------------------------------------------------------- | ----------- |
 | Scan QR at handover point   | `POST /api/v1/verify`                                         | Implemented |
-| Verify integrity and status | Protected QR + `VerifyProtectedQR` + `VerifyBatch`            | Implemented |
+| Verify integrity and status | Protected QR + `VerifyProtectedQR` + token policy (`BLOCKLIST/REVOKE/RESTORE`) + `VerifyBatch` | Implemented |
+| Confirm delivered to consumption point | `POST /api/v1/batches/:batchId/confirm-delivered-to-consumption` (Distributor owner) | Implemented |
 | Block transfer when invalid | API returns `SCAN_REJECTED`                                   | Implemented |
-| Input receiver + sign       | `POST /api/v1/batches/:batchId/ship` with authenticated owner | Implemented |
-| Transfer ownership complete | `POST /api/v1/batches/:batchId/receive` by target owner       | Implemented |
+| Input receiver + sign       | `POST /api/v1/batches/:batchId/ship` with authenticated owner and optional `targetDistributorUnitId` | Implemented |
+| Transfer ownership complete | `POST /api/v1/batches/:batchId/receive` by target owner with unit-target validation when present | Implemented |
 
 ## Phase 3: Multi-Factor Verification
 
@@ -37,6 +38,7 @@ Reference model: 3 phases from provided supply-chain diagram.
 
 ## Gap Summary
 
-1. AI service itself is not bundled in this workspace. Adapter contract is ready.
-2. Advanced sink channels (email/SIEM/case mgmt vendor-specific adapters) are not yet implemented; current baseline supports logger/webhook contract.
-3. IPFS pinning automation is not yet integrated; CID update endpoint is available.
+1. AI verify path is implemented and exercised by stack E2E; remaining gap is production model governance — `best.pt` must be provided externally before deploying AI service.
+2. Advanced sink channels (email/SIEM/case-management vendor integrations) are not yet implemented; current baseline supports `logger|webhook` with retry/backoff/dead-letter.
+3. Provider-level high-availability and replication policy for IPFS pinning still needs production hardening.
+4. Package-image AI lane in `/verify` requires the `packagingImage` multipart field; this field is not yet surfaced in FE flows and requires FE integration work.

@@ -7,7 +7,7 @@
 
 OrdererOrgs:
   - Name: RegulatorOrderer
-    Domain: regulator.example.com
+    Domain: regulator.drugguard.vn
     EnableNodeOUs: true
     Specs:
       - Hostname: orderer0
@@ -16,7 +16,7 @@ OrdererOrgs:
 
 PeerOrgs:
   - Name: Regulator
-    Domain: regulator.example.com
+    Domain: regulator.drugguard.vn
     EnableNodeOUs: true
     Template:
       Count: 2
@@ -24,7 +24,7 @@ PeerOrgs:
       Count: 1
 
   - Name: Manufacturer
-    Domain: manufacturer.example.com
+    Domain: manufacturer.drugguard.vn
     EnableNodeOUs: true
     Template:
       Count: 2
@@ -32,7 +32,7 @@ PeerOrgs:
       Count: 1
 
   - Name: Distributor
-    Domain: distributor.example.com
+    Domain: distributor.drugguard.vn
     EnableNodeOUs: true
     Template:
       Count: 0

@@ -18,10 +18,22 @@ TEST_NETWORK_HOME=${TEST_NETWORK_HOME:-${PWD}}
 . ${TEST_NETWORK_HOME}/scripts/utils.sh
 
 export CORE_PEER_TLS_ENABLED=true
-export ORDERER_CA=${TEST_NETWORK_HOME}/organizations/ordererOrganizations/example.com/tlsca/tlsca.example.com-cert.pem
-export PEER0_ORG1_CA=${TEST_NETWORK_HOME}/organizations/peerOrganizations/org1.example.com/tlsca/tlsca.org1.example.com-cert.pem
-export PEER0_ORG2_CA=${TEST_NETWORK_HOME}/organizations/peerOrganizations/org2.example.com/tlsca/tlsca.org2.example.com-cert.pem
-export PEER0_ORG3_CA=${TEST_NETWORK_HOME}/organizations/peerOrganizations/org3.example.com/tlsca/tlsca.org3.example.com-cert.pem
+export ORDERER_CA=${TEST_NETWORK_HOME}/organizations/ordererOrganizations/drugguard.vn/tlsca/tlsca.drugguard.vn-cert.pem
+export PEER0_ORG1_CA=${TEST_NETWORK_HOME}/organizations/peerOrganizations/regulator.drugguard.vn/tlsca/tlsca.regulator.drugguard.vn-cert.pem
+export PEER0_ORG2_CA=${TEST_NETWORK_HOME}/organizations/peerOrganizations/manufacturer.drugguard.vn/tlsca/tlsca.manufacturer.drugguard.vn-cert.pem
+export PEER0_ORG3_CA=${TEST_NETWORK_HOME}/organizations/peerOrganizations/distributor.drugguard.vn/tlsca/tlsca.distributor.drugguard.vn-cert.pem
+
+if [[ -f /.dockerenv ]]; then
+    export ORDERER_ENDPOINT="orderer1.drugguard.vn:7050"
+    export PEER_REGULATOR_ADDRESS="peer0.regulator.drugguard.vn:7051"
+    export PEER_MANUFACTURER_ADDRESS="peer0.manufacturer.drugguard.vn:9051"
+    export PEER_DISTRIBUTOR_ADDRESS="peer0.distributor.drugguard.vn:11051"
+else
+    export ORDERER_ENDPOINT="localhost:7050"
+    export PEER_REGULATOR_ADDRESS="localhost:7051"
+    export PEER_MANUFACTURER_ADDRESS="localhost:9051"
+    export PEER_DISTRIBUTOR_ADDRESS="localhost:11051"
+fi
 
 # Set environment variables for the peer org
 setGlobals() {
@@ -33,20 +45,20 @@ setGlobals() {
   fi
   infoln "Using organization ${USING_ORG}"
   if [ $USING_ORG -eq 1 ]; then
-    export CORE_PEER_LOCALMSPID=Org1MSP
+    export CORE_PEER_LOCALMSPID=RegulatorMSP
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG1_CA
-    export CORE_PEER_MSPCONFIGPATH=${TEST_NETWORK_HOME}/organizations/peerOrganizations/org1.example.com/users/Admin@org1.example.com/msp
-    export CORE_PEER_ADDRESS=localhost:7051
+    export CORE_PEER_MSPCONFIGPATH=${TEST_NETWORK_HOME}/organizations/peerOrganizations/regulator.drugguard.vn/users/Admin@regulator.drugguard.vn/msp
+    export CORE_PEER_ADDRESS=$PEER_REGULATOR_ADDRESS
   elif [ $USING_ORG -eq 2 ]; then
-    export CORE_PEER_LOCALMSPID=Org2MSP
+    export CORE_PEER_LOCALMSPID=ManufacturerMSP
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG2_CA
-    export CORE_PEER_MSPCONFIGPATH=${TEST_NETWORK_HOME}/organizations/peerOrganizations/org2.example.com/users/Admin@org2.example.com/msp
-    export CORE_PEER_ADDRESS=localhost:9051
+    export CORE_PEER_MSPCONFIGPATH=${TEST_NETWORK_HOME}/organizations/peerOrganizations/manufacturer.drugguard.vn/users/Admin@manufacturer.drugguard.vn/msp
+    export CORE_PEER_ADDRESS=$PEER_MANUFACTURER_ADDRESS
   elif [ $USING_ORG -eq 3 ]; then
-    export CORE_PEER_LOCALMSPID=Org3MSP
+    export CORE_PEER_LOCALMSPID=DistributorMSP
     export CORE_PEER_TLS_ROOTCERT_FILE=$PEER0_ORG3_CA
-    export CORE_PEER_MSPCONFIGPATH=${TEST_NETWORK_HOME}/organizations/peerOrganizations/org3.example.com/users/Admin@org3.example.com/msp
-    export CORE_PEER_ADDRESS=localhost:11051
+    export CORE_PEER_MSPCONFIGPATH=${TEST_NETWORK_HOME}/organizations/peerOrganizations/distributor.drugguard.vn/users/Admin@distributor.drugguard.vn/msp
+    export CORE_PEER_ADDRESS=$PEER_DISTRIBUTOR_ADDRESS
   else
     errorln "ORG Unknown"
   fi
@@ -64,7 +76,7 @@ parsePeerConnectionParameters() {
   PEERS=""
   while [ "$#" -gt 0 ]; do
     setGlobals $1
-    PEER="peer0.org$1"
+    if [ $1 -eq 1 ]; then PEER="peer0.regulator"; elif [ $1 -eq 2 ]; then PEER="peer0.manufacturer"; else PEER="peer0.distributor"; fi
     ## Set peer addresses
     if [ -z "$PEERS" ]
     then

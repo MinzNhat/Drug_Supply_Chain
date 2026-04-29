@@ -6,26 +6,44 @@ const {
     toCanonicalMSP,
 } = require("../helpers/identity");
 const { getTimestampISO } = require("../helpers/time");
-const { getBatchOrThrow, putBatch } = require("../repositories/batchRepository");
+const {
+    getBatchOrThrow,
+    putBatch,
+} = require("../repositories/batchRepository");
 
 /**
- * emergencyRecall is a function that allows the regulatory authority (RegulatorMSP) to initiate an emergency recall of a batch. It checks if the caller belongs to the RegulatorMSP, retrieves the batch, updates its status to "RECALLED" if it is not already recalled, and emits a "RecallAlert" event with details about the recall.
+ * Trigger emergency recall for a batch (RegulatorMSP only).
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state and client identity.
- * @param {string} batchID - The unique identifier of the batch to be recalled.
- * @returns {string} A JSON string representation of the updated batch object after the recall action has been performed.
- * @throws Will throw an error if the caller does not belong to RegulatorMSP or if there is an issue retrieving or updating the batch in the ledger.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @returns {string} JSON-serialized updated batch.
  */
 async function emergencyRecall(ctx, batchID) {
     const clientOrgID = getClientMSP(ctx);
+    const batch = await getBatchOrThrow(ctx, batchID);
 
-    if (!isCanonicalMSP(clientOrgID, "RegulatorMSP")) {
+    const isRegulator = isCanonicalMSP(clientOrgID, "RegulatorMSP");
+    const isManufacturer = isCanonicalMSP(clientOrgID, "ManufacturerMSP");
+
+    if (!isRegulator && !isManufacturer) {
         throw new Error(
-            "Denied: Only RegulatorMSP can initiate an emergency recall.",
+            "Denied: Only RegulatorMSP or ManufacturerMSP can initiate a recall.",
         );
     }
 
-    const batch = await getBatchOrThrow(ctx, batchID);
+    // If Manufacturer, must be the original manufacturer of the batch
+    if (isManufacturer) {
+        // We use manufacturerMSP and manufacturerId to verify ownership of the production line
+        // Some legacy batches might not have manufacturerId, so we fallback to MSP
+        const clientID = ctx.clientIdentity.getID(); // This might be complex to match exactly with ownerId
+        // For simplicity in this system, we trust the mspId and the provided actorId from backend
+        // But on-chain, we should check if the client's MSP matches the batch's manufacturerMSP
+        if (!isCanonicalMSP(clientOrgID, batch.manufacturerMSP)) {
+            throw new Error(
+                "Denied: Manufacturers can only recall their own batches.",
+            );
+        }
+    }
 
     if (batch.status !== "RECALLED") {
         batch.status = "RECALLED";

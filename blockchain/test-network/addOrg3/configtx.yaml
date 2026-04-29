@@ -16,23 +16,23 @@ Organizations:
     - &Org3
         # DefaultOrg defines the organization which is used in the sampleconfig
         # of the fabric.git development environment
-        Name: Org3MSP
+        Name: DistributorMSP
 
         # ID to load the MSP definition as
-        ID: Org3MSP
+        ID: DistributorMSP
 
-        MSPDir: ../organizations/peerOrganizations/org3.example.com/msp
+        MSPDir: ../organizations/peerOrganizations/distributor.drugguard.vn/msp
 
         Policies:
             Readers:
                 Type: Signature
-                Rule: "OR('Org3MSP.admin', 'Org3MSP.peer', 'Org3MSP.client')"
+                Rule: "OR('DistributorMSP.admin', 'DistributorMSP.peer', 'DistributorMSP.client')"
             Writers:
                 Type: Signature
-                Rule: "OR('Org3MSP.admin', 'Org3MSP.client')"
+                Rule: "OR('DistributorMSP.admin', 'DistributorMSP.client')"
             Admins:
                 Type: Signature
-                Rule: "OR('Org3MSP.admin')"
+                Rule: "OR('DistributorMSP.admin')"
             Endorsement:
                 Type: Signature
-                Rule: "OR('Org3MSP.peer')"
+                Rule: "OR('DistributorMSP.peer')"

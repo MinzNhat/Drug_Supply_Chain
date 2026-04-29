@@ -12,26 +12,26 @@ import {
  */
 
 test("normalizeMspId accepts org aliases", () => {
-    assert.equal(normalizeMspId("Org1MSP"), "RegulatorMSP");
-    assert.equal(normalizeMspId("Org2MSP"), "ManufacturerMSP");
-    assert.equal(normalizeMspId("Org3MSP"), "DistributorMSP");
+    assert.equal(normalizeMspId("RegulatorMSP"), "RegulatorMSP");
+    assert.equal(normalizeMspId("ManufacturerMSP"), "ManufacturerMSP");
+    assert.equal(normalizeMspId("DistributorMSP"), "DistributorMSP");
     assert.equal(normalizeMspId("UnknownMSP"), "");
 });
 
 test("normalizeRole accepts role and msp aliases", () => {
     assert.equal(normalizeRole("regulator"), "Regulator");
-    assert.equal(normalizeRole("Org2MSP"), "Manufacturer");
+    assert.equal(normalizeRole("ManufacturerMSP"), "Manufacturer");
     assert.equal(normalizeRole("Manufacturer"), "Manufacturer");
     assert.equal(normalizeRole(""), "");
 });
 
 test("isMspIdForRole validates canonical mapping", () => {
-    assert.equal(isMspIdForRole("Distributor", "Org3MSP"), true);
+    assert.equal(isMspIdForRole("Distributor", "DistributorMSP"), true);
     assert.equal(isMspIdForRole("Manufacturer", "DistributorMSP"), false);
 });
 
 test("toCanonicalMspForRole resolves canonical msp", () => {
     assert.equal(toCanonicalMspForRole("Regulator"), "RegulatorMSP");
-    assert.equal(toCanonicalMspForRole("Org3MSP"), "DistributorMSP");
+    assert.equal(toCanonicalMspForRole("DistributorMSP"), "DistributorMSP");
     assert.equal(toCanonicalMspForRole("invalid"), "");
 });

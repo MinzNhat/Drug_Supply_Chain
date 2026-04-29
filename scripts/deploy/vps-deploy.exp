@@ -1,0 +1,15 @@
+#!/usr/bin/expect -f
+
+set timeout -1
+set password [lindex $argv 0]
+set host "52.229.220.194"
+set user "minznhat"
+
+spawn ./scripts/deploy/vps-deploy-steps.sh $password
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    eof
+}

@@ -26,6 +26,18 @@ const reportSchema = new mongoose.Schema(
             enum: ["PENDING", "RESOLVED", "REJECTED"],
             default: "PENDING",
         },
+        severity: {
+            type: String,
+            enum: ["info", "warn", "critical"],
+            default: "warn",
+        },
+        lat: Number,
+        lng: Number,
+        reporterIP: String,
+        province: {
+            type: String,
+            required: true,
+        },
     },
     {
         timestamps: true,

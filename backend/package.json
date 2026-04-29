@@ -7,13 +7,14 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "node src/server.js",
-    "test": "node --test test/unit",
-    "test:integration": "node --test test/integration",
+    "test": "node --test 'test/unit/*.test.js'",
+    "test:integration": "node --test 'test/integration/*.test.js'",
     "e2e:runtime": "node ../scripts/backend/e2e-runtime.mjs",
     "e2e:geo": "node ../scripts/backend/e2e-geo-flow.mjs",
     "e2e:transfer": "node ../scripts/backend/e2e-transfer-batch.mjs",
     "e2e:transfer:negative": "node ../scripts/backend/e2e-transfer-negative.mjs",
-    "e2e:ai": "node ../scripts/backend/e2e-ai-alerting.mjs"
+    "e2e:ai": "node ../scripts/backend/e2e-ai-alerting.mjs",
+    "create-admin": "node ../scripts/create-admin.mjs"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.13.4",
@@ -23,6 +24,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.3.2",
     "form-data": "^4.0.0",
     "helmet": "^7.1.0",
     "jimp": "^0.22.10",

@@ -31,6 +31,7 @@ export type ApiError = {
         code: string;
         message: string;
         traceId: string;
+        trace_id?: string;
         details?: Record<string, unknown>;
     };
 };

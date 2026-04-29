@@ -5,6 +5,7 @@ const ROLE_TO_CANONICAL_MSP = Object.freeze({
     Manufacturer: "ManufacturerMSP",
     Distributor: "DistributorMSP",
     Regulator: "RegulatorMSP",
+    Admin: "RegulatorMSP",
 });
 
 /**
@@ -12,11 +13,11 @@ const ROLE_TO_CANONICAL_MSP = Object.freeze({
  */
 const MSP_ALIAS_TO_CANONICAL = Object.freeze({
     ManufacturerMSP: "ManufacturerMSP",
-    Org2MSP: "ManufacturerMSP",
+    ManufacturerMSP: "ManufacturerMSP",
     DistributorMSP: "DistributorMSP",
-    Org3MSP: "DistributorMSP",
+    DistributorMSP: "DistributorMSP",
     RegulatorMSP: "RegulatorMSP",
-    Org1MSP: "RegulatorMSP",
+    RegulatorMSP: "RegulatorMSP",
 });
 
 /**
@@ -35,13 +36,14 @@ const ROLE_ALIAS_TO_CANONICAL = Object.freeze({
     manufacturer: "Manufacturer",
     distributor: "Distributor",
     regulator: "Regulator",
+    admin: "Admin",
 });
 
 /**
  * Normalize a role-or-msp string into canonical application role.
  *
  * @param {unknown} value - Role or MSP alias.
- * @returns {"Manufacturer"|"Distributor"|"Regulator"|""}
+ * @returns {"Manufacturer"|"Distributor"|"Regulator"|"Admin"|""}
  */
 export const normalizeRole = (value) => {
     if (typeof value !== "string") {

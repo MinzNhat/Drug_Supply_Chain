@@ -141,6 +141,74 @@ const validateFabricRuntimeConfig = () => {
         }
     }
 
+    const identityBridge = config.fabric.distributorIdentityBridge;
+    if (identityBridge?.enabled) {
+        const units = identityBridge.units || {};
+        if (
+            identityBridge.requireUnitForDistributor &&
+            Object.keys(units).length === 0
+        ) {
+            missingFields.push(
+                "distributorIdentityBridge.units (at least one unit mapping required)",
+            );
+        }
+
+        for (const [unitId, unitConfig] of Object.entries(units)) {
+            if (!hasText(unitConfig.certPath)) {
+                missingFields.push(`distributorIdentityBridge.units.${unitId}.certPath`);
+            }
+            if (!hasText(unitConfig.keyPath)) {
+                missingFields.push(`distributorIdentityBridge.units.${unitId}.keyPath`);
+            }
+
+            if (
+                !hasText(unitConfig.certPath) ||
+                !isReadablePemPath(unitConfig.certPath)
+            ) {
+                missingPaths.push(`distributorIdentityBridge.units.${unitId}.certPath`);
+            }
+            if (
+                !hasText(unitConfig.keyPath) ||
+                !isReadablePemPath(unitConfig.keyPath)
+            ) {
+                missingPaths.push(`distributorIdentityBridge.units.${unitId}.keyPath`);
+            }
+
+            if (
+                hasText(unitConfig.tlsCertPath) &&
+                !isReadablePemPath(unitConfig.tlsCertPath)
+            ) {
+                missingPaths.push(
+                    `distributorIdentityBridge.units.${unitId}.tlsCertPath`,
+                );
+            }
+
+            if (config.fabric.profile !== "local") {
+                if (usesHostDockerInternal(unitConfig.peerEndpoint)) {
+                    localAssumptions.push(
+                        `distributorIdentityBridge.units.${unitId}.peerEndpoint`,
+                    );
+                }
+
+                if (hasLocalTestNetworkPath(unitConfig.tlsCertPath)) {
+                    localAssumptions.push(
+                        `distributorIdentityBridge.units.${unitId}.tlsCertPath`,
+                    );
+                }
+                if (hasLocalTestNetworkPath(unitConfig.certPath)) {
+                    localAssumptions.push(
+                        `distributorIdentityBridge.units.${unitId}.certPath`,
+                    );
+                }
+                if (hasLocalTestNetworkPath(unitConfig.keyPath)) {
+                    localAssumptions.push(
+                        `distributorIdentityBridge.units.${unitId}.keyPath`,
+                    );
+                }
+            }
+        }
+    }
+
     if (
         missingFields.length === 0 &&
         missingPaths.length === 0 &&
@@ -165,10 +233,10 @@ const validateFabricRuntimeConfig = () => {
 
     logger.warn({
         message:
-            "Fabric is enabled but runtime configuration is incomplete; falling back to disabled ledger repository",
+            "Fabric configuration is incomplete, but proceeding anyway since strictCredentials is false",
         ...summary,
     });
-    return false;
+    return true;
 };
 
 /**
@@ -185,6 +253,28 @@ const hasAllFabricCredentials = () => {
         requiredPaths.push([`${role}.keyPath`, org.keyPath]);
     }
 
+    const identityBridge = config.fabric.distributorIdentityBridge;
+    if (identityBridge?.enabled) {
+        for (const [unitId, unitConfig] of Object.entries(
+            identityBridge.units || {},
+        )) {
+            requiredPaths.push([
+                `distributorIdentityBridge.units.${unitId}.certPath`,
+                unitConfig.certPath,
+            ]);
+            requiredPaths.push([
+                `distributorIdentityBridge.units.${unitId}.keyPath`,
+                unitConfig.keyPath,
+            ]);
+            if (hasText(unitConfig.tlsCertPath)) {
+                requiredPaths.push([
+                    `distributorIdentityBridge.units.${unitId}.tlsCertPath`,
+                    unitConfig.tlsCertPath,
+                ]);
+            }
+        }
+    }
+
     const missing = requiredPaths.filter(([, inputPath]) => {
         return !isReadablePemPath(inputPath);
     });
@@ -195,10 +285,10 @@ const hasAllFabricCredentials = () => {
 
     logger.warn({
         message:
-            "Fabric is enabled but credential paths are unavailable; falling back to disabled ledger repository",
+            "Fabric credential paths are unavailable for some organizations, but proceeding since strictCredentials is false",
         missingPaths: missing.map(([field]) => field),
     });
-    return false;
+    return true;
 };
 
 /**

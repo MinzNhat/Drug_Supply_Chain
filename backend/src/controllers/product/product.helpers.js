@@ -12,16 +12,17 @@ import {
  * @returns {{ id: string, role: string, mspId: string, traceId: string }} Canonical actor context.
  */
 export const requireActor = (req) => {
-    const actor = req.user ?? { id: "", mspId: "", role: "" };
-    const role = normalizeRole(actor.role);
-    const mspId = normalizeMspId(actor.mspId);
+    const user = req.user ?? { userId: "", mspId: "", role: "" };
+    const role = normalizeRole(user.role);
+    const mspId = normalizeMspId(user.mspId);
 
     if (!role || !mspId || !isMspIdForRole(role, mspId)) {
         throw new HttpException(401, "Missing or invalid access token");
     }
 
     return {
-        ...actor,
+        ...user,
+        id: user.userId, // Map userId from authMiddleware to id used in services
         role,
         mspId,
         traceId: req.traceId,
@@ -36,7 +37,7 @@ export const requireActor = (req) => {
  * @returns {Express.Multer.File | undefined} Uploaded image file when present.
  */
 export const getUploadedImage = (req, fieldName) => {
-    if (req.file && fieldName === "image") {
+    if (req.file && req.file.fieldname === fieldName) {
         return req.file;
     }
 

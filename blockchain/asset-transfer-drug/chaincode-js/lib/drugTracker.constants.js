@@ -6,11 +6,11 @@
  */
 const MSP_CANONICAL = Object.freeze({
     RegulatorMSP: "RegulatorMSP",
-    Org1MSP: "RegulatorMSP",
+    RegulatorMSP: "RegulatorMSP",
     ManufacturerMSP: "ManufacturerMSP",
-    Org2MSP: "ManufacturerMSP",
+    ManufacturerMSP: "ManufacturerMSP",
     DistributorMSP: "DistributorMSP",
-    Org3MSP: "DistributorMSP",
+    DistributorMSP: "DistributorMSP",
 });
 
 /*

@@ -1,0 +1,16 @@
+{
+  "profile": "staging",
+  "enabled": true,
+  "serviceUrl": "http://ai-service.staging.svc.cluster.local:8701",
+  "timeoutMs": 10000,
+  "failOpen": true,
+  "owners": {
+    "serviceOwner": "platform-backend@company.example",
+    "mlOwner": "ml-quality@company.example",
+    "onCall": "#supplychain-ai-staging"
+  },
+  "runbook": {
+    "path": "docs/platform/ai-verification-operations.md",
+    "escalation": "staging-incident-playbook"
+  }
+}

@@ -41,12 +41,14 @@ const assertError = (label, response, expectedStatuses, expectedCodes) => {
  * Build compact transfer-state snapshot for immutability assertions.
  *
  * @param {Record<string, unknown>} batch - Batch payload from API read endpoint.
- * @returns {{ ownerMSP: string, transferStatus: string, targetOwnerMSP: string, transferHistoryLength: number }}
+ * @returns {{ ownerMSP: string, ownerUnitId: string, transferStatus: string, targetOwnerMSP: string, targetOwnerUnitId: string, transferHistoryLength: number }}
  */
 const toTransferState = (batch) => ({
     ownerMSP: String(batch?.ownerMSP ?? ""),
+    ownerUnitId: String(batch?.ownerUnitId ?? ""),
     transferStatus: String(batch?.transferStatus ?? ""),
     targetOwnerMSP: String(batch?.targetOwnerMSP ?? ""),
+    targetOwnerUnitId: String(batch?.targetOwnerUnitId ?? ""),
     transferHistoryLength: Array.isArray(batch?.transferHistory)
         ? batch.transferHistory.length
         : 0,
@@ -55,8 +57,11 @@ const toTransferState = (batch) => ({
 const run = async () => {
     const now = Date.now();
     const manufacturerUsername = `manu_tn_${now}`;
-    const distributorUsername = `dist_tn_${now}`;
+    const distributorAUsername = `dist_tn_a_${now}`;
+    const distributorBUsername = `dist_tn_b_${now}`;
     const regulatorUsername = `reg_tn_${now}`;
+    const distributorUnitA = "dist-unit-a";
+    const distributorUnitB = "dist-unit-b";
 
     await register(
         request,
@@ -66,14 +71,23 @@ const run = async () => {
     );
     await register(
         request,
-        distributorUsername,
+        distributorAUsername,
         "Distributor",
         "DistributorMSP",
+        distributorUnitA,
+    );
+    await register(
+        request,
+        distributorBUsername,
+        "Distributor",
+        "DistributorMSP",
+        distributorUnitB,
     );
     await register(request, regulatorUsername, "Regulator", "RegulatorMSP");
 
     const manufacturerToken = await login(request, manufacturerUsername);
-    const distributorToken = await login(request, distributorUsername);
+    const distributorAToken = await login(request, distributorAUsername);
+    const distributorBToken = await login(request, distributorBUsername);
     const regulatorToken = await login(request, regulatorUsername);
 
     const createResponse = await request.post(
@@ -106,9 +120,12 @@ const run = async () => {
     // Case 1: forbidden actor tries to ship batch (non-owner ship attempt).
     const forbiddenShip = await request.post(
         `/batches/${batchId}/ship`,
-        { targetOwnerMSP: "DistributorMSP" },
         {
-            headers: authHeader(distributorToken),
+            targetOwnerMSP: "DistributorMSP",
+            targetDistributorUnitId: distributorUnitB,
+        },
+        {
+            headers: authHeader(distributorAToken),
         },
     );
     assertError(
@@ -125,8 +142,11 @@ const run = async () => {
     const afterForbiddenShipState = toTransferState(afterForbiddenShipRead.data?.data);
     if (
         afterForbiddenShipState.ownerMSP !== initialState.ownerMSP ||
+        afterForbiddenShipState.ownerUnitId !== initialState.ownerUnitId ||
         afterForbiddenShipState.transferStatus !== initialState.transferStatus ||
         afterForbiddenShipState.targetOwnerMSP !== initialState.targetOwnerMSP ||
+        afterForbiddenShipState.targetOwnerUnitId !==
+            initialState.targetOwnerUnitId ||
         afterForbiddenShipState.transferHistoryLength !==
             initialState.transferHistoryLength
     ) {
@@ -139,7 +159,10 @@ const run = async () => {
     // Move to in-transit state for receive negative-path checks.
     const validShip = await request.post(
         `/batches/${batchId}/ship`,
-        { targetOwnerMSP: "DistributorMSP" },
+        {
+            targetOwnerMSP: "DistributorMSP",
+            targetDistributorUnitId: distributorUnitA,
+        },
         {
             headers: authHeader(manufacturerToken),
         },
@@ -169,7 +192,8 @@ const run = async () => {
     if (
         inTransitState.ownerMSP !== "ManufacturerMSP" ||
         inTransitState.transferStatus !== "IN_TRANSIT" ||
-        inTransitState.targetOwnerMSP !== "DistributorMSP"
+        inTransitState.targetOwnerMSP !== "DistributorMSP" ||
+        inTransitState.targetOwnerUnitId !== distributorUnitA
     ) {
         fail("in-transit state mismatch after wrong receiver", {
             inTransitState,
@@ -180,23 +204,66 @@ const run = async () => {
         `/batches/${batchId}/receive`,
         {},
         {
-            headers: authHeader(distributorToken),
+            headers: authHeader(distributorAToken),
         },
     );
     assertStatus("valid receive", validReceive, 200);
 
+    // Case 3: distributor cannot ship to the same distributor unit.
+    const sameUnitShip = await request.post(
+        `/batches/${batchId}/ship`,
+        {
+            targetOwnerMSP: "DistributorMSP",
+            targetDistributorUnitId: distributorUnitA,
+        },
+        {
+            headers: authHeader(distributorAToken),
+        },
+    );
+    assertError(
+        "same unit ship",
+        sameUnitShip,
+        expectedNegativeStatuses,
+        [
+            ...expectedNegativeCodes,
+            "SAME_DISTRIBUTOR_UNIT_TRANSFER_NOT_ALLOWED",
+        ],
+    );
+
+    // Move to in-transit again for repeated receive negative-path checks.
+    const crossUnitShip = await request.post(
+        `/batches/${batchId}/ship`,
+        {
+            targetOwnerMSP: "DistributorMSP",
+            targetDistributorUnitId: distributorUnitB,
+        },
+        {
+            headers: authHeader(distributorAToken),
+        },
+    );
+    assertStatus("cross unit ship", crossUnitShip, 200);
+
+    const crossUnitReceive = await request.post(
+        `/batches/${batchId}/receive`,
+        {},
+        {
+            headers: authHeader(distributorBToken),
+        },
+    );
+    assertStatus("cross unit receive", crossUnitReceive, 200);
+
     const afterValidReceiveRead = await request.get(`/batches/${batchId}`, {
-        headers: authHeader(distributorToken),
+        headers: authHeader(distributorBToken),
     });
     assertStatus("read after valid receive", afterValidReceiveRead, 200);
     const postReceiveState = toTransferState(afterValidReceiveRead.data?.data);
 
-    // Case 3: repeated receive must fail and preserve post-receive state.
+    // Case 4: repeated receive must fail and preserve post-receive state.
     const repeatedReceive = await request.post(
         `/batches/${batchId}/receive`,
         {},
         {
-            headers: authHeader(distributorToken),
+            headers: authHeader(distributorBToken),
         },
     );
     assertError(
@@ -207,15 +274,17 @@ const run = async () => {
     );
 
     const finalRead = await request.get(`/batches/${batchId}`, {
-        headers: authHeader(distributorToken),
+        headers: authHeader(distributorBToken),
     });
     assertStatus("read final batch state", finalRead, 200);
     const finalState = toTransferState(finalRead.data?.data);
 
     if (
         finalState.ownerMSP !== postReceiveState.ownerMSP ||
+        finalState.ownerUnitId !== postReceiveState.ownerUnitId ||
         finalState.transferStatus !== postReceiveState.transferStatus ||
         finalState.targetOwnerMSP !== postReceiveState.targetOwnerMSP ||
+        finalState.targetOwnerUnitId !== postReceiveState.targetOwnerUnitId ||
         finalState.transferHistoryLength !== postReceiveState.transferHistoryLength
     ) {
         fail("state mutated after repeated receive", {
@@ -231,6 +300,7 @@ const run = async () => {
                 batchId,
                 forbiddenShipStatus: forbiddenShip.status,
                 wrongReceiverStatus: wrongReceiver.status,
+                sameUnitShipStatus: sameUnitShip.status,
                 repeatedReceiveStatus: repeatedReceive.status,
                 finalState,
             },

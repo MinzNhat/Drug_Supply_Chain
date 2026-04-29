@@ -1,110 +1,172 @@
-# Drug Guard Unified Stack
+# Drug Guard
 
-Drug Guard is a root-orchestrated monorepo for pharmaceutical traceability.
+Hệ thống truy xuất nguồn gốc dược phẩm chống hàng giả dựa trên Blockchain và AI.
 
-It combines:
+Drug Guard kết hợp ba lớp xác thực để bảo vệ chuỗi cung ứng thuốc:
 
-- Hyperledger Fabric network and chaincode for immutable supply-chain state.
-- Backend API for auth, batch lifecycle, transfer, recall, event timeline, and analytics.
-- Protected QR service (Node + Python core) for anti-counterfeit verification.
-- AI appearance verification service (Node gateway + Python core) for packaging-image analysis.
+1. **Lớp số** — Protected QR với HMAC token và on-chain digest anchor.
+2. **Lớp sổ cái** — Hyperledger Fabric ghi nhận toàn bộ vòng đời lô hàng (tạo, chuyển giao, thu hồi).
+3. **Lớp AI** — YOLOv8 phân tích hình ảnh bao bì để phát hiện hàng giả.
 
-## Repository Layout
+---
 
-- `backend/`: business API, Fabric gateway integration, service-layer logic.
-- `blockchain/`: Fabric network assets and chaincode source.
-- `protected-qr/`: QR generation and verification services.
-- `scripts/`: centralized orchestration and operational scripts.
-- `docs/`: centralized technical, operational, and governance documentation.
-- `test-output/`: standardized execution logs from root test orchestration.
+## Kiến trúc hệ thống
 
-## Local Architecture
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Frontend (Mobile/Web)                     │
+└──────────────────────────┬──────────────────────────────────────┘
+                           │ REST API
+┌──────────────────────────▼──────────────────────────────────────┐
+│                     Backend API  (:8090)                         │
+│  Auth · Batch Lifecycle · Verify · Transfer · Timeline          │
+└───────┬───────────────────┬────────────────────┬────────────────┘
+        │ Fabric Gateway    │ REST                │ REST
+┌───────▼──────┐  ┌─────────▼──────────┐  ┌──────▼──────────────┐
+│  Hyperledger │  │  Protected QR Svc  │  │   AI Verify Svc     │
+│  Fabric      │  │  (Node + Python)   │  │  (Node + YOLOv8)    │
+│  :7051       │  │  :8080 / :8000     │  │  :8701 / :8700      │
+└──────────────┘  └──────────────────-─┘  └─────────────────────┘
+        │
+┌───────▼──────┐
+│  MongoDB     │
+│  (snapshots, │
+│  alerts, geo)│
+└──────────────┘
+```
 
-Local E2E uses one root Docker Compose and root orchestration scripts:
+## Cấu trúc monorepo
 
-1. Fabric network + chaincode come up.
-2. Mongo + Protected QR + AI + Backend services start.
-3. Runtime API tests run against healthy services.
-4. Transfer-batch E2E runs as a dedicated step.
+| Thư mục | Mô tả |
+| ------- | ----- |
+| `backend/` | API chính: auth, quản lý lô hàng, verify, chuyển giao, cảnh báo |
+| `blockchain/` | Fabric network, chaincode `drugtracker`, và scripts lifecycle |
+| `protected-qr/` | Service tạo/xác thực Protected QR (Node + Python core) |
+| `ai-service/` | Service phân tích bao bì bằng YOLOv8 (Node gateway + Python core) |
+| `scripts/` | Orchestration trung tâm: stack lifecycle, E2E, quality gate |
+| `docs/` | Tài liệu kỹ thuật tập trung |
+| `test-output/` | Schema log tiêu chuẩn từ E2E orchestration |
 
-## Prerequisites
+---
 
-- Docker Desktop (or compatible Docker engine) is running.
-- Bash shell available.
-- Host has enough memory for Fabric + app services.
+## Yêu cầu môi trường
 
-## Canonical Commands
+- Docker Desktop (hoặc Docker Engine tương thích) đang chạy
+- Bash shell
+- Đủ RAM cho Fabric + các service ứng dụng (khuyến nghị ≥ 8 GB)
 
-All commands are executed from repository root.
+---
 
-### Stack lifecycle
+## Lệnh vận hành
+
+Tất cả lệnh chạy từ **thư mục gốc repository**.
+
+### Quản lý stack
 
 ```bash
+# Cài đặt binaries Fabric và Docker images lần đầu
 ./scripts/run-all.sh prereq
+
+# Khởi động toàn bộ stack
 ./scripts/run-all.sh up
+
+# Chạy E2E tests
 ./scripts/run-all.sh test
+
+# Chạy E2E transfer riêng
 ./scripts/run-all.sh test-transfer
+
+# Khởi động + test trong một lệnh
 ./scripts/run-all.sh full
+
+# Kiểm tra trạng thái service
 ./scripts/run-all.sh status
+
+# Tắt stack
 ./scripts/run-all.sh down
 ```
 
-### Standardized test-output logs
+### Quality gate
 
 ```bash
-./scripts/test-all.sh full
-./scripts/test-all.sh test
-./scripts/test-all.sh transfer
-```
-
-### Baseline quality gate
-
-```bash
+# Nhanh: chaincode unit tests + backend unit tests + syntax checks
 ./scripts/quality-gate.sh quick
+
+# Đầy đủ: quick + E2E tests
 ./scripts/quality-gate.sh full
 ```
 
-Generated artifacts follow the centralized schema described in `test-output/README.md`.
+### Chaincode upgrade (sau khi thay đổi chaincode)
 
-## Standard Test-Output Schema
+```bash
+CC_VERSION=<x> CC_SEQUENCE=<y> ./scripts/blockchain/blockchain-run.sh upgrade
+```
 
-Every generated step file contains:
+---
 
-1. `description`: what this step validates.
-2. `input`: exact command executed.
-3. `started_at`: UTC timestamp.
-4. `output`: full stdout/stderr captured.
-5. `ended_at`: UTC timestamp.
-6. `status`: `SUCCESS` or `FAILED`.
+## Luồng vận hành chuỗi cung ứng
 
-## Documentation Map
+### 1. Sản xuất
 
-- Docs index: `docs/README.md`
-- Contributor guide: `CONTRIBUTING.md`
-- Platform conformance matrix: `docs/platform/flow-conformance-matrix.md`
-- Deployment readiness: `docs/platform/deployment-readiness.md`
-- Nationwide readiness checklist: `docs/platform/nationwide-readiness-checklist.md`
-- Project audit checklist: `docs/platform/project-audit-gap-checklist.md`
-- Repository development standard: `docs/platform/repository-development-standard.md`
-- Backend integration contract: `docs/backend/integration-contract.md`
-- Backend supply-chain API: `docs/backend/supply-chain-api.md`
-- Backend conventions: `docs/backend/conventions.md`
-- Backend local E2E runbook: `docs/backend/runbook-local-e2e.md`
-- Blockchain overview: `docs/blockchain/blockchain-overview.md`
-- Protected QR overview: `docs/protected-qr/service-overview.md`
+1. Nhà sản xuất tạo lô hàng → `POST /api/v1/batches`
+2. Protected QR được tạo và gắn vào lô → `POST /api/v1/batches/:id/protected-qr/bind`
+3. IPFS CID của tài liệu kỹ thuật được cập nhật → `POST /api/v1/batches/:id/documents`
 
-## Repository Standards
+### 2. Vận chuyển
 
-- Root-level scripts are the canonical operational interface.
-- Root baseline standardization files are `.editorconfig`, `.gitattributes`, and `CONTRIBUTING.md`.
-- Root `docker-compose.yml` is the primary local stack definition.
-- DATN now uses a single git root at workspace level.
-- Root `.gitignore` is the canonical ignore policy for the entire repository.
-- Module-level `.gitignore` files are avoided unless a folder is intentionally split into a separate repository in the future.
-- Docs are centralized under `docs/` and should not be duplicated in subprojects.
+4. Chuyển giao lô hàng → `POST /api/v1/batches/:id/ship`
+5. Nhận lô hàng → `POST /api/v1/batches/:id/receive`
+6. Xác nhận giao đến điểm tiêu thụ → `POST /api/v1/batches/:id/confirm-delivered-to-consumption`
 
-## Current Scope and Known Follow-ups
+### 3. Xác thực (Consumer / Regulator)
 
-- Runtime and transfer ownership flows are covered by root E2E scripts.
-- Geospatial event, timeline, and heatmap endpoints are available in backend APIs and should be expanded with dedicated E2E cases.
-- Production hardening tasks remain in platform readiness documents (security, observability, and policy automation).
+7. Quét QR và xác thực → `POST /api/v1/verify`
+   - Layer 1: Protected QR HMAC token check
+   - Layer 2: On-chain digest match (`VerifyProtectedQR`)
+   - Layer 3: AI bao bì analysis nếu có ảnh gói
+   - Ghi nhận telemetry scan và cập nhật risk status
+
+### 4. Thu hồi khẩn cấp
+
+8. Regulator thu hồi lô → `POST /api/v1/batches/:id/recall`
+
+---
+
+## Tài liệu kỹ thuật
+
+| Tài liệu | Mô tả |
+| -------- | ----- |
+| [`docs/README.md`](docs/README.md) | Index toàn bộ tài liệu kỹ thuật |
+| [`docs/backend/integration-contract.md`](docs/backend/integration-contract.md) | Mapping endpoint ↔ chaincode + decision contract |
+| [`docs/backend/supply-chain-api.md`](docs/backend/supply-chain-api.md) | Schema chi tiết toàn bộ API endpoints |
+| [`docs/platform/flow-conformance-matrix.md`](docs/platform/flow-conformance-matrix.md) | Trạng thái triển khai từng bước supply-chain |
+| [`docs/platform/unified-api-inventory.md`](docs/platform/unified-api-inventory.md) | Inventory tất cả API public và internal |
+| [`docs/blockchain/blockchain-overview.md`](docs/blockchain/blockchain-overview.md) | Kiến trúc Fabric và identity model |
+
+---
+
+## Cấu hình bảo mật cơ bản
+
+Các secrets **không được commit** vào source code. Trước khi chạy:
+
+```bash
+# Backend
+cp backend/.env.example backend/.env
+# Chỉnh sửa JWT_SECRET, MONGO_URI, FABRIC_* paths
+
+# Protected QR
+cp protected-qr/.env.example protected-qr/.env
+# Chỉnh sửa HMAC_SECRET, MONGO_URI
+
+# AI Service (cần file model)
+# Đặt best.pt vào ai-service/models/best.pt
+```
+
+---
+
+## Tiêu chuẩn repository
+
+- Root `docker-compose.yml` là stack tích hợp chính thức cho local development.
+- Root `scripts/` là interface vận hành chính thức — không bypass qua lệnh thủ công.
+- Root `.gitignore` áp dụng cho toàn bộ monorepo.
+- Tài liệu tập trung tại `docs/` — không duplicate vào subprojects.

@@ -29,12 +29,19 @@ export const assertStatus = (label, response, expectedStatus) => {
     }
 };
 
-export const register = async (request, username, role, mspId) => {
+export const register = async (
+    request,
+    username,
+    role,
+    mspId,
+    distributorUnitId = "",
+) => {
     const response = await request.post("/auth/register", {
         username,
         password: PASSWORD,
         role,
         mspId,
+        distributorUnitId,
     });
     assertStatus(`register ${username}`, response, 201);
 };

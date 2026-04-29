@@ -10,7 +10,7 @@ Usage:
     ./scripts/quality-gate.sh [quick|full]
 
 Modes:
-  quick  Run backend tests + protected-qr build checks.
+    quick  Run backend tests + protected-qr build checks + chaincode unit tests.
   full   Run quick checks + full orchestrated stack validation.
 EOF
 }
@@ -45,6 +45,9 @@ run_quick_checks() {
 
     install_node_deps "${ROOT_DIR}/protected-qr"
     (cd "${ROOT_DIR}/protected-qr" && npm run build)
+
+    install_node_deps "${ROOT_DIR}/blockchain/asset-transfer-drug/chaincode-js"
+    (cd "${ROOT_DIR}/blockchain/asset-transfer-drug/chaincode-js" && npm run test:unit)
 }
 
 run_full_checks() {

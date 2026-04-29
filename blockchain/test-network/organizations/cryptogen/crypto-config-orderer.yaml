@@ -11,7 +11,7 @@ OrdererOrgs:
   # Orderer
   # ---------------------------------------------------------------------------
   - Name: Orderer
-    Domain: example.com
+    Domain: drugguard.vn
     EnableNodeOUs: true
 
 
@@ -19,7 +19,7 @@ OrdererOrgs:
     # "Specs" - See PeerOrgs for complete description
     # ---------------------------------------------------------------------------
     Specs:
-      - Hostname: orderer
+      - Hostname: orderer1
         SANS:
           - localhost
       - Hostname: orderer2

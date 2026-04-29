@@ -6,11 +6,13 @@ import {
     normalizeMspId,
     normalizeRole,
 } from "../../utils/msp/msp.js";
+import { normalizeDistributorUnitId } from "../../utils/distributor/distributor-unit-id.js";
 
 /**
  * Canonical header name containing bearer credentials.
  */
 const AUTHORIZATION_HEADER = "authorization";
+
 
 /**
  * JWT authentication middleware.
@@ -45,13 +47,49 @@ export const authMiddleware = (req, _res, next) => {
             throw new HttpException(403, "Invalid or expired token");
         }
 
+        const distributorUnitId = normalizeDistributorUnitId(
+            payload.distributorUnitId,
+        );
+
         req.user = {
-            id: payload.userId,
+            userId: payload.userId,
+            username: payload.username || "",
             role,
             mspId,
+            distributorUnitId: distributorUnitId || "",
+            regulatorLevel: payload.regulatorLevel || "",
+            province: payload.province || "",
         };
+
         next();
-    } catch (err) {
+    } catch (error) {
+        if (error instanceof HttpException) throw error;
         throw new HttpException(403, "Invalid or expired token");
     }
+};
+
+/**
+ * Optional JWT authentication middleware.
+ */
+export const optionalAuthMiddleware = (req, _res, next) => {
+    const header = req.header(AUTHORIZATION_HEADER) ?? "";
+    const [scheme, token] = header.split(" ");
+
+    if (scheme !== "Bearer" || !token) {
+        return next();
+    }
+
+    try {
+        const payload = jwt.verify(token, config.jwtSecret);
+        if (
+            payload &&
+            typeof payload === "object" &&
+            typeof payload.userId === "string"
+        ) {
+            req.user = payload;
+        }
+    } catch (error) {
+        // Ignore errors for optional auth
+    }
+    next();
 };

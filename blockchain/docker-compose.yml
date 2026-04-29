@@ -1,11 +1,11 @@
 volumes:
-    orderer0.regulator.example.com:
-    orderer1.regulator.example.com:
-    orderer2.regulator.example.com:
-    peer0.regulator.example.com:
-    peer1.regulator.example.com:
-    peer0.manufacturer.example.com:
-    peer1.manufacturer.example.com:
+    orderer0.regulator.drugguard.vn:
+    orderer1.regulator.drugguard.vn:
+    orderer2.regulator.drugguard.vn:
+    peer0.regulator.drugguard.vn:
+    peer1.regulator.drugguard.vn:
+    peer0.manufacturer.drugguard.vn:
+    peer1.manufacturer.drugguard.vn:
 
 networks:
     canonical_net:
@@ -44,9 +44,9 @@ services:
         networks:
             - canonical_net
 
-    orderer0.regulator.example.com:
+    orderer0.regulator.drugguard.vn:
         image: hyperledger/fabric-orderer:latest
-        container_name: orderer0.regulator.example.com
+        container_name: orderer0.regulator.drugguard.vn
         environment:
             - FABRIC_LOGGING_SPEC=INFO
             - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
@@ -70,18 +70,18 @@ services:
             - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:7053
         command: orderer
         volumes:
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.example.com/orderers/orderer0.regulator.example.com/msp:/var/hyperledger/orderer/msp
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.example.com/orderers/orderer0.regulator.example.com/tls:/var/hyperledger/orderer/tls
-            - orderer0.regulator.example.com:/var/hyperledger/production/orderer
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer0.regulator.drugguard.vn/msp:/var/hyperledger/orderer/msp
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer0.regulator.drugguard.vn/tls:/var/hyperledger/orderer/tls
+            - orderer0.regulator.drugguard.vn:/var/hyperledger/production/orderer
         ports:
             - "7050:7050"
             - "7053:7053"
         networks:
             - canonical_net
 
-    orderer1.regulator.example.com:
+    orderer1.regulator.drugguard.vn:
         image: hyperledger/fabric-orderer:latest
-        container_name: orderer1.regulator.example.com
+        container_name: orderer1.regulator.drugguard.vn
         environment:
             - FABRIC_LOGGING_SPEC=INFO
             - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
@@ -105,18 +105,18 @@ services:
             - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:8053
         command: orderer
         volumes:
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.example.com/orderers/orderer1.regulator.example.com/msp:/var/hyperledger/orderer/msp
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.example.com/orderers/orderer1.regulator.example.com/tls:/var/hyperledger/orderer/tls
-            - orderer1.regulator.example.com:/var/hyperledger/production/orderer
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer1.regulator.drugguard.vn/msp:/var/hyperledger/orderer/msp
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer1.regulator.drugguard.vn/tls:/var/hyperledger/orderer/tls
+            - orderer1.regulator.drugguard.vn:/var/hyperledger/production/orderer
         ports:
             - "8050:8050"
             - "8053:8053"
         networks:
             - canonical_net
 
-    orderer2.regulator.example.com:
+    orderer2.regulator.drugguard.vn:
         image: hyperledger/fabric-orderer:latest
-        container_name: orderer2.regulator.example.com
+        container_name: orderer2.regulator.drugguard.vn
         environment:
             - FABRIC_LOGGING_SPEC=INFO
             - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
@@ -140,18 +140,18 @@ services:
             - ORDERER_ADMIN_LISTENADDRESS=0.0.0.0:9053
         command: orderer
         volumes:
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.example.com/orderers/orderer2.regulator.example.com/msp:/var/hyperledger/orderer/msp
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.example.com/orderers/orderer2.regulator.example.com/tls:/var/hyperledger/orderer/tls
-            - orderer2.regulator.example.com:/var/hyperledger/production/orderer
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer2.regulator.drugguard.vn/msp:/var/hyperledger/orderer/msp
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer2.regulator.drugguard.vn/tls:/var/hyperledger/orderer/tls
+            - orderer2.regulator.drugguard.vn:/var/hyperledger/production/orderer
         ports:
             - "9050:9050"
             - "9053:9053"
         networks:
             - canonical_net
 
-    peer0.regulator.example.com:
+    peer0.regulator.drugguard.vn:
         image: hyperledger/fabric-peer:latest
-        container_name: peer0.regulator.example.com
+        container_name: peer0.regulator.drugguard.vn
         environment:
             - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
             - FABRIC_LOGGING_SPEC=INFO
@@ -159,28 +159,28 @@ services:
             - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
             - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
             - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-            - CORE_PEER_ID=peer0.regulator.example.com
-            - CORE_PEER_ADDRESS=peer0.regulator.example.com:7051
+            - CORE_PEER_ID=peer0.regulator.drugguard.vn
+            - CORE_PEER_ADDRESS=peer0.regulator.drugguard.vn:7051
             - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
-            - CORE_PEER_CHAINCODEADDRESS=peer0.regulator.example.com:7052
+            - CORE_PEER_CHAINCODEADDRESS=peer0.regulator.drugguard.vn:7052
             - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
-            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.regulator.example.com:7051
-            - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.regulator.example.com:8051
+            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.regulator.drugguard.vn:7051
+            - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.regulator.drugguard.vn:8051
             - CORE_PEER_LOCALMSPID=RegulatorMSP
             - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/lifecycle-admin-msp
         command: peer node start
         volumes:
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/regulator.example.com/peers/peer0.regulator.example.com:/etc/hyperledger/fabric
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/regulator.example.com/users/Admin@regulator.example.com/msp:/etc/hyperledger/fabric/lifecycle-admin-msp
-            - peer0.regulator.example.com:/var/hyperledger/production
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/regulator.drugguard.vn/peers/peer0.regulator.drugguard.vn:/etc/hyperledger/fabric
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/regulator.drugguard.vn/users/Admin@regulator.drugguard.vn/msp:/etc/hyperledger/fabric/lifecycle-admin-msp
+            - peer0.regulator.drugguard.vn:/var/hyperledger/production
         ports:
             - "7051:7051"
         networks:
             - canonical_net
 
-    peer1.regulator.example.com:
+    peer1.regulator.drugguard.vn:
         image: hyperledger/fabric-peer:latest
-        container_name: peer1.regulator.example.com
+        container_name: peer1.regulator.drugguard.vn
         environment:
             - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
             - FABRIC_LOGGING_SPEC=INFO
@@ -188,27 +188,27 @@ services:
             - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
             - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
             - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-            - CORE_PEER_ID=peer1.regulator.example.com
-            - CORE_PEER_ADDRESS=peer1.regulator.example.com:8051
+            - CORE_PEER_ID=peer1.regulator.drugguard.vn
+            - CORE_PEER_ADDRESS=peer1.regulator.drugguard.vn:8051
             - CORE_PEER_LISTENADDRESS=0.0.0.0:8051
-            - CORE_PEER_CHAINCODEADDRESS=peer1.regulator.example.com:8052
+            - CORE_PEER_CHAINCODEADDRESS=peer1.regulator.drugguard.vn:8052
             - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:8052
-            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.regulator.example.com:8051
-            - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.regulator.example.com:7051
+            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.regulator.drugguard.vn:8051
+            - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.regulator.drugguard.vn:7051
             - CORE_PEER_LOCALMSPID=RegulatorMSP
             - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
         command: peer node start
         volumes:
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/regulator.example.com/peers/peer1.regulator.example.com:/etc/hyperledger/fabric
-            - peer1.regulator.example.com:/var/hyperledger/production
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/regulator.drugguard.vn/peers/peer1.regulator.drugguard.vn:/etc/hyperledger/fabric
+            - peer1.regulator.drugguard.vn:/var/hyperledger/production
         ports:
             - "8051:8051"
         networks:
             - canonical_net
 
-    peer0.manufacturer.example.com:
+    peer0.manufacturer.drugguard.vn:
         image: hyperledger/fabric-peer:latest
-        container_name: peer0.manufacturer.example.com
+        container_name: peer0.manufacturer.drugguard.vn
         environment:
             - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
             - FABRIC_LOGGING_SPEC=INFO
@@ -216,27 +216,27 @@ services:
             - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
             - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
             - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-            - CORE_PEER_ID=peer0.manufacturer.example.com
-            - CORE_PEER_ADDRESS=peer0.manufacturer.example.com:9051
+            - CORE_PEER_ID=peer0.manufacturer.drugguard.vn
+            - CORE_PEER_ADDRESS=peer0.manufacturer.drugguard.vn:9051
             - CORE_PEER_LISTENADDRESS=0.0.0.0:9051
-            - CORE_PEER_CHAINCODEADDRESS=peer0.manufacturer.example.com:9052
+            - CORE_PEER_CHAINCODEADDRESS=peer0.manufacturer.drugguard.vn:9052
             - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:9052
-            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.manufacturer.example.com:9051
-            - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.manufacturer.example.com:10051
+            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.manufacturer.drugguard.vn:9051
+            - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.manufacturer.drugguard.vn:10051
             - CORE_PEER_LOCALMSPID=ManufacturerMSP
             - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
         command: peer node start
         volumes:
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/manufacturer.example.com/peers/peer0.manufacturer.example.com:/etc/hyperledger/fabric
-            - peer0.manufacturer.example.com:/var/hyperledger/production
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/manufacturer.drugguard.vn/peers/peer0.manufacturer.drugguard.vn:/etc/hyperledger/fabric
+            - peer0.manufacturer.drugguard.vn:/var/hyperledger/production
         ports:
             - "9051:9051"
         networks:
             - canonical_net
 
-    peer1.manufacturer.example.com:
+    peer1.manufacturer.drugguard.vn:
         image: hyperledger/fabric-peer:latest
-        container_name: peer1.manufacturer.example.com
+        container_name: peer1.manufacturer.drugguard.vn
         environment:
             - FABRIC_CFG_PATH=/etc/hyperledger/peercfg
             - FABRIC_LOGGING_SPEC=INFO
@@ -244,19 +244,19 @@ services:
             - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
             - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
             - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
-            - CORE_PEER_ID=peer1.manufacturer.example.com
-            - CORE_PEER_ADDRESS=peer1.manufacturer.example.com:10051
+            - CORE_PEER_ID=peer1.manufacturer.drugguard.vn
+            - CORE_PEER_ADDRESS=peer1.manufacturer.drugguard.vn:10051
             - CORE_PEER_LISTENADDRESS=0.0.0.0:10051
-            - CORE_PEER_CHAINCODEADDRESS=peer1.manufacturer.example.com:10052
+            - CORE_PEER_CHAINCODEADDRESS=peer1.manufacturer.drugguard.vn:10052
             - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:10052
-            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.manufacturer.example.com:10051
-            - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.manufacturer.example.com:9051
+            - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.manufacturer.drugguard.vn:10051
+            - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.manufacturer.drugguard.vn:9051
             - CORE_PEER_LOCALMSPID=ManufacturerMSP
             - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
         command: peer node start
         volumes:
-            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/manufacturer.example.com/peers/peer1.manufacturer.example.com:/etc/hyperledger/fabric
-            - peer1.manufacturer.example.com:/var/hyperledger/production
+            - ./asset-transfer-drug/infrastructure/canonical/organizations/peerOrganizations/manufacturer.drugguard.vn/peers/peer1.manufacturer.drugguard.vn:/etc/hyperledger/fabric
+            - peer1.manufacturer.drugguard.vn:/var/hyperledger/production
         ports:
             - "10051:10051"
         networks:

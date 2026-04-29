@@ -57,6 +57,7 @@ const batchGeoEventSchema = new Schema(
         actorRole: { type: String, default: "", index: true },
         actorMSP: { type: String, default: "", index: true },
         actorUserId: { type: String, default: "", index: true },
+        province: { type: String, default: "", index: true },
         traceId: { type: String, default: "", index: true },
         occurredAt: { type: Date, default: Date.now, index: true },
     },

@@ -189,11 +189,13 @@ export const upsertBatchIndex = async (batchID, bindingInput) => {
         {
             $set: {
                 batchID,
-                dataHash: bindingInput.dataHash,
+                qrMetadata: {
+                    dataHash: bindingInput.dataHash,
+                    metadataSeries: bindingInput.metadataSeries,
+                    metadataIssued: bindingInput.metadataIssued,
+                    metadataExpiry: bindingInput.metadataExpiry,
+                },
                 tokenDigest: bindingInput.tokenDigest,
-                metadataSeries: bindingInput.metadataSeries,
-                metadataIssued: bindingInput.metadataIssued,
-                metadataExpiry: bindingInput.metadataExpiry,
                 qrToken: bindingInput.token ?? "",
             },
         },
@@ -207,14 +209,28 @@ export const upsertBatchIndex = async (batchID, bindingInput) => {
  * @param {string} dataHash - Protected QR data hash.
  * @returns {Promise<Record<string, unknown>>} Persisted index entry.
  */
-export const requireBatchIndexByDataHash = async (dataHash) => {
-    const index = await BatchIndex.findOne({ dataHash }).lean();
+export const requireBatchIndexByDataHash = async (dataHash, token = "") => {
+    // Try multiple lookup strategies for maximum reliability
+    const index = await BatchIndex.findOne({
+        $or: [
+            { "qrMetadata.dataHash": dataHash },
+            { dataHash: dataHash }, // Compatibility with old/malformed entries
+            { qrToken: token }      // Fallback: Exact token match
+        ]
+    }).lean();
+
     if (!index) {
+        logger.warn({
+            message: "Batch lookup failed for QR signature",
+            dataHash,
+            tokenSnippet: token ? token.substring(0, 15) : "none"
+        });
+        
         throw new HttpException(
             404,
             "BATCH_NOT_FOUND",
-            "Batch mapping not found for data hash",
-            { dataHash },
+            "Hệ thống không tìm thấy lô hàng tương ứng với mã QR này trên Sổ cái.",
+            { dataHash }
         );
     }
 

@@ -38,7 +38,15 @@ export class DisabledLedgerRepository extends LedgerRepository {
         disabledError();
     }
 
+    async readProtectedQr() {
+        disabledError();
+    }
+
     async recordProtectedQrVerification() {
+        disabledError();
+    }
+
+    async updateProtectedQrTokenPolicy() {
         disabledError();
     }
 
@@ -47,6 +55,10 @@ export class DisabledLedgerRepository extends LedgerRepository {
     }
 
     async receiveBatch() {
+        disabledError();
+    }
+
+    async confirmDeliveredToConsumption() {
         disabledError();
     }
 

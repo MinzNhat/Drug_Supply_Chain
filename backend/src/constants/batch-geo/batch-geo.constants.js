@@ -5,10 +5,14 @@
  */
 export const BATCH_GEO_EVENT_TYPES = Object.freeze([
     "SCAN",
+    "CREATE",
+    "SHIP",
+    "RECEIVE",
     "HANDOVER_OUT",
     "HANDOVER_IN",
     "WAREHOUSE",
     "DELIVERY",
+    "RECALL",
     "RECALL_ALERT",
     "INSPECTION",
 ]);

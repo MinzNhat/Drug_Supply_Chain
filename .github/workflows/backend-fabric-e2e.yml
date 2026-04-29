@@ -6,16 +6,26 @@ on:
     paths:
       - backend/**
       - protected-qr/**
+      - ai-service/**
       - blockchain/**
       - scripts/**
+      - docs/backend/**
+      - docs/protected-qr/**
+      - docs/ai-service/**
+      - docs/platform/flow-conformance-matrix.md
       - docker-compose.yml
       - .github/workflows/backend-fabric-e2e.yml
   pull_request:
     paths:
       - backend/**
       - protected-qr/**
+      - ai-service/**
       - blockchain/**
       - scripts/**
+      - docs/backend/**
+      - docs/protected-qr/**
+      - docs/ai-service/**
+      - docs/platform/flow-conformance-matrix.md
       - docker-compose.yml
       - .github/workflows/backend-fabric-e2e.yml
 
@@ -51,6 +61,7 @@ jobs:
         run: |
           chmod +x scripts/run-all.sh scripts/test-all.sh
           chmod +x scripts/blockchain/*.sh
+          chmod +x scripts/ci/*.sh
 
       - name: Bootstrap Fabric binaries
         run: ./scripts/run-all.sh prereq
@@ -59,7 +70,10 @@ jobs:
         run: ./scripts/quality-gate.sh quick
 
       - name: Run unified full-stack E2E
-        run: ./scripts/run-all.sh full
+        run: ./scripts/test-all.sh full
+
+      - name: Gate on test-output artifact statuses
+        run: ./scripts/ci/scan-test-output-status.sh
 
       - name: Print diagnostics on failure
         if: failure()

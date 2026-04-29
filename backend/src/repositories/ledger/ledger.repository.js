@@ -37,9 +37,19 @@ export class LedgerRepository {
         return notImplemented("verifyProtectedQr", args);
     }
 
+    /** Read anchored protected QR state for one batch. */
+    async readProtectedQr(...args) {
+        return notImplemented("readProtectedQr", args);
+    }
+
     /** Persist protected QR verification signal for one batch. */
     async recordProtectedQrVerification(...args) {
         return notImplemented("recordProtectedQrVerification", args);
+    }
+
+    /** Update protected QR token lifecycle policy for one batch. */
+    async updateProtectedQrTokenPolicy(...args) {
+        return notImplemented("updateProtectedQrTokenPolicy", args);
     }
 
     /** Start ownership transfer for one batch. */
@@ -50,6 +60,11 @@ export class LedgerRepository {
     /** Finalize ownership transfer for one batch. */
     async receiveBatch(...args) {
         return notImplemented("receiveBatch", args);
+    }
+
+    /** Confirm delivery to consumption point before scan-count growth. */
+    async confirmDeliveredToConsumption(...args) {
+        return notImplemented("confirmDeliveredToConsumption", args);
     }
 
     /** Trigger emergency recall for one batch. */

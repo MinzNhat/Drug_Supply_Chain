@@ -136,6 +136,11 @@ services:
       - "8090:8090"
     environment:
       PORT: 8090
+      DOC_UPLOAD_ENABLED: ${DOC_UPLOAD_ENABLED:-false}
+      DOC_UPLOAD_PROVIDER: ${DOC_UPLOAD_PROVIDER:-mock}
+      DOC_UPLOAD_KUBO_API_URL: ${DOC_UPLOAD_KUBO_API_URL:-http://ipfs:5001}
+      DOC_UPLOAD_TIMEOUT_MS: ${DOC_UPLOAD_TIMEOUT_MS:-15000}
+      HOST_PROJECT_DIR: ${PWD}
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: drug_guard
       QR_SERVICE_URL: http://qr-service:8080
@@ -144,10 +149,18 @@ services:
       JWT_EXPIRES_IN: 8h
       LOG_LEVEL: info
       REQUEST_TIMEOUT_MS: 10000
-      AI_VERIFICATION_ENABLED: ${DATN_AI_VERIFICATION_ENABLED:-false}
+      AI_VERIFICATION_ENABLED: ${DATN_AI_VERIFICATION_ENABLED:-true}
+      AI_VERIFICATION_PROFILE: ${DATN_AI_VERIFICATION_PROFILE:-local}
+      AI_VERIFICATION_PROFILE_FILE: ${DATN_AI_VERIFICATION_PROFILE_FILE:-}
+      AI_VERIFICATION_STRICT_CONFIG: ${DATN_AI_VERIFICATION_STRICT_CONFIG:-false}
       AI_VERIFICATION_URL: ${DATN_AI_VERIFICATION_URL:-http://ai-service:8701}
       AI_VERIFICATION_TIMEOUT_MS: ${DATN_AI_VERIFICATION_TIMEOUT_MS:-10000}
       AI_VERIFICATION_FAIL_OPEN: ${DATN_AI_VERIFICATION_FAIL_OPEN:-true}
+      AI_VERIFICATION_OWNER_SERVICE: ${DATN_AI_VERIFICATION_OWNER_SERVICE:-}
+      AI_VERIFICATION_OWNER_ML: ${DATN_AI_VERIFICATION_OWNER_ML:-}
+      AI_VERIFICATION_OWNER_ONCALL: ${DATN_AI_VERIFICATION_OWNER_ONCALL:-}
+      AI_VERIFICATION_RUNBOOK_PATH: ${DATN_AI_VERIFICATION_RUNBOOK_PATH:-docs/platform/ai-verification-operations.md}
+      AI_VERIFICATION_RUNBOOK_ESCALATION: ${DATN_AI_VERIFICATION_RUNBOOK_ESCALATION:-}
       ALERT_SINK_ENABLED: true
       ALERT_SINK_TYPE: logger
       ALERT_SINK_RETRY_MAX_ATTEMPTS: 3
@@ -173,24 +186,24 @@ services:
       FABRIC_SUBMIT_RETRY_BASE_DELAY_MS: 250
       FABRIC_SUBMIT_RETRY_MAX_DELAY_MS: 1200
       FABRIC_PUBLIC_SCAN_ROLE: Regulator
-      FABRIC_MANUFACTURER_MSP_ID: Org2MSP
+      FABRIC_MANUFACTURER_MSP_ID: ManufacturerMSP
       FABRIC_MANUFACTURER_PEER_ENDPOINT: host.docker.internal:9051
-      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.org2.example.com
-      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
-      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
-      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore
-      FABRIC_DISTRIBUTOR_MSP_ID: Org3MSP
+      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.manufacturer.drugguard.vn
+      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/peers/peer0.manufacturer.drugguard.vn/tls/ca.crt
+      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/signcerts/User1@manufacturer.drugguard.vn-cert.pem
+      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/keystore
+      FABRIC_DISTRIBUTOR_MSP_ID: DistributorMSP
       FABRIC_DISTRIBUTOR_PEER_ENDPOINT: host.docker.internal:11051
-      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.org3.example.com
-      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt
-      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem
-      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore
-      FABRIC_REGULATOR_MSP_ID: Org1MSP
+      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.distributor.drugguard.vn
+      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/peers/peer0.distributor.drugguard.vn/tls/ca.crt
+      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/signcerts/User1@distributor.drugguard.vn-cert.pem
+      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/keystore
+      FABRIC_REGULATOR_MSP_ID: RegulatorMSP
       FABRIC_REGULATOR_PEER_ENDPOINT: host.docker.internal:7051
-      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.org1.example.com
-      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
-      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore
+      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.regulator.drugguard.vn
+      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/peers/peer0.regulator.drugguard.vn/tls/ca.crt
+      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/signcerts/User1@regulator.drugguard.vn-cert.pem
+      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/keystore
     depends_on:
       mongo:
         condition: service_healthy
@@ -201,7 +214,11 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
+      - ./backend/src:/app/src:rw
       - ./blockchain/test-network/organizations:/fabric/organizations:ro
+      - ./blockchain:/app/blockchain:rw
+      - ./scripts:/app/scripts:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test:
         [
@@ -211,6 +228,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 25
+    networks:
+      - app-network
+      - fabric_test
+
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: drug-guard-ipfs
+    ports:
+      - "4001:4001" # ipfs swarm
+      - "5001:5001" # ipfs api
+      - "8085:8080" # ipfs gateway (changed from 8080 to avoid conflict)
+    volumes:
+      - ipfs-data:/data/ipfs
     networks:
       - app-network
 
@@ -245,6 +275,7 @@ services:
       - "8093:8090"
     environment:
       PORT: 8090
+      HOST_PROJECT_DIR: ${PWD}
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: drug_guard
       QR_SERVICE_URL: http://qr-service:8080
@@ -278,24 +309,24 @@ services:
       FABRIC_SUBMIT_RETRY_BASE_DELAY_MS: 250
       FABRIC_SUBMIT_RETRY_MAX_DELAY_MS: 1200
       FABRIC_PUBLIC_SCAN_ROLE: Regulator
-      FABRIC_MANUFACTURER_MSP_ID: Org2MSP
+      FABRIC_MANUFACTURER_MSP_ID: ManufacturerMSP
       FABRIC_MANUFACTURER_PEER_ENDPOINT: host.docker.internal:9051
-      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.org2.example.com
-      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
-      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
-      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore
-      FABRIC_DISTRIBUTOR_MSP_ID: Org3MSP
+      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.manufacturer.drugguard.vn
+      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/peers/peer0.manufacturer.drugguard.vn/tls/ca.crt
+      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/signcerts/User1@manufacturer.drugguard.vn-cert.pem
+      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/keystore
+      FABRIC_DISTRIBUTOR_MSP_ID: DistributorMSP
       FABRIC_DISTRIBUTOR_PEER_ENDPOINT: host.docker.internal:11051
-      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.org3.example.com
-      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt
-      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem
-      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore
-      FABRIC_REGULATOR_MSP_ID: Org1MSP
+      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.distributor.drugguard.vn
+      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/peers/peer0.distributor.drugguard.vn/tls/ca.crt
+      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/signcerts/User1@distributor.drugguard.vn-cert.pem
+      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/keystore
+      FABRIC_REGULATOR_MSP_ID: RegulatorMSP
       FABRIC_REGULATOR_PEER_ENDPOINT: host.docker.internal:7051
-      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.org1.example.com
-      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
-      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore
+      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.regulator.drugguard.vn
+      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/peers/peer0.regulator.drugguard.vn/tls/ca.crt
+      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/signcerts/User1@regulator.drugguard.vn-cert.pem
+      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/keystore
       AI_VERIFICATION_ENABLED: true
       AI_VERIFICATION_URL: http://ai-verifier-mock:8095
       AI_VERIFICATION_TIMEOUT_MS: 10000
@@ -334,6 +365,7 @@ services:
       - "8091:8090"
     environment:
       PORT: 8090
+      HOST_PROJECT_DIR: ${PWD}
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: drug_guard
       QR_SERVICE_URL: http://qr-service:8080
@@ -367,24 +399,24 @@ services:
       FABRIC_SUBMIT_RETRY_BASE_DELAY_MS: 250
       FABRIC_SUBMIT_RETRY_MAX_DELAY_MS: 1200
       FABRIC_PUBLIC_SCAN_ROLE: Regulator
-      FABRIC_MANUFACTURER_MSP_ID: Org2MSP
+      FABRIC_MANUFACTURER_MSP_ID: ManufacturerMSP
       FABRIC_MANUFACTURER_PEER_ENDPOINT: host.docker.internal:9051
-      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.org2.example.com
-      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
-      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
-      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore
-      FABRIC_DISTRIBUTOR_MSP_ID: Org3MSP
+      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.manufacturer.drugguard.vn
+      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/peers/peer0.manufacturer.drugguard.vn/tls/ca.crt
+      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/signcerts/User1@manufacturer.drugguard.vn-cert.pem
+      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/keystore
+      FABRIC_DISTRIBUTOR_MSP_ID: DistributorMSP
       FABRIC_DISTRIBUTOR_PEER_ENDPOINT: host.docker.internal:11051
-      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.org3.example.com
-      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt
-      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem
-      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore
-      FABRIC_REGULATOR_MSP_ID: Org1MSP
+      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.distributor.drugguard.vn
+      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/peers/peer0.distributor.drugguard.vn/tls/ca.crt
+      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/signcerts/User1@distributor.drugguard.vn-cert.pem
+      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/keystore
+      FABRIC_REGULATOR_MSP_ID: RegulatorMSP
       FABRIC_REGULATOR_PEER_ENDPOINT: host.docker.internal:7051
-      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.org1.example.com
-      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
-      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore
+      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.regulator.drugguard.vn
+      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/peers/peer0.regulator.drugguard.vn/tls/ca.crt
+      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/signcerts/User1@regulator.drugguard.vn-cert.pem
+      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/keystore
       AI_VERIFICATION_ENABLED: true
       AI_VERIFICATION_URL: http://127.0.0.1:65535
       AI_VERIFICATION_TIMEOUT_MS: 800
@@ -421,6 +453,7 @@ services:
       - "8092:8090"
     environment:
       PORT: 8090
+      HOST_PROJECT_DIR: ${PWD}
       MONGO_URI: mongodb://mongo:27017
       MONGO_DB: drug_guard
       QR_SERVICE_URL: http://qr-service:8080
@@ -454,24 +487,24 @@ services:
       FABRIC_SUBMIT_RETRY_BASE_DELAY_MS: 250
       FABRIC_SUBMIT_RETRY_MAX_DELAY_MS: 1200
       FABRIC_PUBLIC_SCAN_ROLE: Regulator
-      FABRIC_MANUFACTURER_MSP_ID: Org2MSP
+      FABRIC_MANUFACTURER_MSP_ID: ManufacturerMSP
       FABRIC_MANUFACTURER_PEER_ENDPOINT: host.docker.internal:9051
-      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.org2.example.com
-      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt
-      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem
-      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore
-      FABRIC_DISTRIBUTOR_MSP_ID: Org3MSP
+      FABRIC_MANUFACTURER_PEER_HOST_ALIAS: peer0.manufacturer.drugguard.vn
+      FABRIC_MANUFACTURER_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/peers/peer0.manufacturer.drugguard.vn/tls/ca.crt
+      FABRIC_MANUFACTURER_CERT_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/signcerts/User1@manufacturer.drugguard.vn-cert.pem
+      FABRIC_MANUFACTURER_KEY_PATH: /fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/keystore
+      FABRIC_DISTRIBUTOR_MSP_ID: DistributorMSP
       FABRIC_DISTRIBUTOR_PEER_ENDPOINT: host.docker.internal:11051
-      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.org3.example.com
-      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt
-      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem
-      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore
-      FABRIC_REGULATOR_MSP_ID: Org1MSP
+      FABRIC_DISTRIBUTOR_PEER_HOST_ALIAS: peer0.distributor.drugguard.vn
+      FABRIC_DISTRIBUTOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/peers/peer0.distributor.drugguard.vn/tls/ca.crt
+      FABRIC_DISTRIBUTOR_CERT_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/signcerts/User1@distributor.drugguard.vn-cert.pem
+      FABRIC_DISTRIBUTOR_KEY_PATH: /fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/keystore
+      FABRIC_REGULATOR_MSP_ID: RegulatorMSP
       FABRIC_REGULATOR_PEER_ENDPOINT: host.docker.internal:7051
-      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.org1.example.com
-      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt
-      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem
-      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore
+      FABRIC_REGULATOR_PEER_HOST_ALIAS: peer0.regulator.drugguard.vn
+      FABRIC_REGULATOR_TLS_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/peers/peer0.regulator.drugguard.vn/tls/ca.crt
+      FABRIC_REGULATOR_CERT_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/signcerts/User1@regulator.drugguard.vn-cert.pem
+      FABRIC_REGULATOR_KEY_PATH: /fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/keystore
       AI_VERIFICATION_ENABLED: true
       AI_VERIFICATION_URL: http://127.0.0.1:65535
       AI_VERIFICATION_TIMEOUT_MS: 800
@@ -517,7 +550,10 @@ services:
 
 volumes:
   mongo-data:
+  ipfs-data:
 
 networks:
   app-network:
     driver: bridge
+  fabric_test:
+    external: true

@@ -152,6 +152,52 @@ const asNonEmptyString = (value, fallback = "") => {
 };
 
 /**
+ * Parse comma-separated env values into a normalized unique list.
+ *
+ * @param {unknown} value - Raw environment value.
+ * @param {string[]} fallback - Fallback items when env is blank.
+ * @returns {string[]} Normalized unique values.
+ */
+const asCsvList = (value, fallback = []) => {
+    const normalized = asNonEmptyString(value, "");
+    if (!normalized) {
+        return fallback;
+    }
+
+    return [...new Set(normalized.split(",").map((item) => item.trim()))].filter(
+        (item) => item.length > 0,
+    );
+};
+
+/**
+ * Parse one JSON object environment value with safe fallback.
+ *
+ * @param {unknown} value - Raw environment value.
+ * @param {Record<string, unknown>} fallback - Fallback object.
+ * @param {string} keyName - Environment key name for error context.
+ * @returns {Record<string, unknown>} Parsed JSON object.
+ */
+const asJsonObject = (value, fallback = {}, keyName = "JSON_ENV") => {
+    const normalized = asNonEmptyString(value, "");
+    if (!normalized) {
+        return fallback;
+    }
+
+    let parsed;
+    try {
+        parsed = JSON.parse(normalized);
+    } catch (error) {
+        throw new Error(`Invalid JSON in ${keyName}`);
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error(`${keyName} must be a JSON object`);
+    }
+
+    return parsed;
+};
+
+/**
  * Resolve profile file path from cwd when relative path is provided.
  *
  * @param {string} inputPath - Relative or absolute path.
@@ -188,16 +234,63 @@ const normalizeFabricProfile = (value) => {
     return normalized;
 };
 
+/** Supported AI verification profile identifiers. */
+const AI_VERIFICATION_PROFILES = ["local", "staging", "prod"];
+
+/**
+ * Parse and validate AI verification profile value.
+ *
+ * @param {string} value - Raw profile value from env or file.
+ * @returns {"local" | "staging" | "prod"} Valid profile identifier.
+ */
+const normalizeAiVerificationProfile = (value) => {
+    const normalized = asNonEmptyString(value, "local").toLowerCase();
+
+    if (!AI_VERIFICATION_PROFILES.includes(normalized)) {
+        throw new Error(
+            `Invalid AI_VERIFICATION_PROFILE: ${value}. Allowed: ${AI_VERIFICATION_PROFILES.join(", ")}`,
+        );
+    }
+
+    return normalized;
+};
+
+/**
+ * Check whether one URL points to local-only host aliases.
+ *
+ * @param {string} inputUrl - Candidate URL.
+ * @returns {boolean} True when URL host is local-only.
+ */
+const isLocalOnlyUrl = (inputUrl) => {
+    if (!inputUrl) {
+        return false;
+    }
+
+    let parsed;
+    try {
+        parsed = new URL(inputUrl);
+    } catch (error) {
+        return false;
+    }
+
+    const host = asNonEmptyString(parsed.hostname, "").toLowerCase();
+    return ["localhost", "127.0.0.1", "0.0.0.0", "host.docker.internal"].includes(host);
+};
+
 const fabricEnabled = asBoolean(process.env.FABRIC_ENABLED, false);
-const aiVerificationEnabled = asBoolean(
-    process.env.AI_VERIFICATION_ENABLED,
-    false,
-);
 
 const fabricProfile = normalizeFabricProfile(
     process.env.FABRIC_PROFILE ?? "local",
 );
 const fabricProfileFile = asNonEmptyString(process.env.FABRIC_PROFILE_FILE, "");
+
+const aiVerificationProfile = normalizeAiVerificationProfile(
+    process.env.AI_VERIFICATION_PROFILE ?? "local",
+);
+const aiVerificationProfileFile = asNonEmptyString(
+    process.env.AI_VERIFICATION_PROFILE_FILE,
+    "",
+);
 
 /**
  * Load optional Fabric profile JSON and enforce profile consistency.
@@ -246,6 +339,56 @@ const loadFabricProfileConfig = () => {
 };
 
 const fabricProfileConfig = loadFabricProfileConfig();
+
+/**
+ * Load optional AI verification profile JSON and enforce profile consistency.
+ *
+ * @returns {Record<string, unknown>} Parsed profile object.
+ */
+const loadAiVerificationProfileConfig = () => {
+    if (!aiVerificationProfileFile) {
+        return {};
+    }
+
+    const absoluteProfilePath = resolveFilePath(aiVerificationProfileFile);
+
+    let raw = "";
+    try {
+        raw = fs.readFileSync(absoluteProfilePath, "utf8");
+    } catch (error) {
+        throw new Error(
+            `Cannot read AI_VERIFICATION_PROFILE_FILE: ${absoluteProfilePath}`,
+        );
+    }
+
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch (error) {
+        throw new Error(
+            `AI_VERIFICATION_PROFILE_FILE is not valid JSON: ${absoluteProfilePath}`,
+        );
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error(
+            "AI_VERIFICATION_PROFILE_FILE must contain a JSON object at root",
+        );
+    }
+
+    const fileProfile = normalizeAiVerificationProfile(
+        parsed.profile ?? aiVerificationProfile,
+    );
+    if (fileProfile !== aiVerificationProfile) {
+        throw new Error(
+            `AI_VERIFICATION_PROFILE (${aiVerificationProfile}) does not match AI_VERIFICATION_PROFILE_FILE profile (${fileProfile})`,
+        );
+    }
+
+    return parsed;
+};
+
+const aiVerificationProfileConfig = loadAiVerificationProfileConfig();
 
 /**
  * Resolve one Fabric field by precedence: env > profile file > fallback.
@@ -319,10 +462,144 @@ const fabricOrganizationsFromProfile =
         ? fabricProfileConfig.organizations
         : {};
 
+const distributorIdentityBridgeFromProfile =
+    fabricProfileConfig.distributorIdentityBridge &&
+    typeof fabricProfileConfig.distributorIdentityBridge === "object" &&
+    !Array.isArray(fabricProfileConfig.distributorIdentityBridge)
+        ? fabricProfileConfig.distributorIdentityBridge
+        : {};
+
+const distributorIdentityBridgeUnitsFromProfile =
+    distributorIdentityBridgeFromProfile.units &&
+    typeof distributorIdentityBridgeFromProfile.units === "object" &&
+    !Array.isArray(distributorIdentityBridgeFromProfile.units)
+        ? distributorIdentityBridgeFromProfile.units
+        : {};
+
+const distributorIdentityBridgeUnits = asJsonObject(
+    process.env.FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_UNITS_JSON,
+    distributorIdentityBridgeUnitsFromProfile,
+    "FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_UNITS_JSON",
+);
+
 const fabricStrictCredentials = asBoolean(
     process.env.FABRIC_STRICT_CREDENTIALS,
     fabricProfile !== "local",
 );
+
+const aiVerificationOwnersFromProfile =
+    aiVerificationProfileConfig.owners &&
+    typeof aiVerificationProfileConfig.owners === "object" &&
+    !Array.isArray(aiVerificationProfileConfig.owners)
+        ? aiVerificationProfileConfig.owners
+        : {};
+
+const aiVerificationRunbookFromProfile =
+    aiVerificationProfileConfig.runbook &&
+    typeof aiVerificationProfileConfig.runbook === "object" &&
+    !Array.isArray(aiVerificationProfileConfig.runbook)
+        ? aiVerificationProfileConfig.runbook
+        : {};
+
+const aiVerificationEnabled = asBoolean(
+    process.env.AI_VERIFICATION_ENABLED,
+    asBoolean(aiVerificationProfileConfig.enabled, false),
+);
+const aiVerificationServiceUrl = requiredIf(
+    aiVerificationEnabled,
+    "AI_VERIFICATION_URL",
+    asNonEmptyString(aiVerificationProfileConfig.serviceUrl, ""),
+);
+const aiVerificationTimeoutMs = asPositiveInt(
+    process.env.AI_VERIFICATION_TIMEOUT_MS,
+    asPositiveInt(aiVerificationProfileConfig.timeoutMs, 10000),
+);
+const aiVerificationFailOpen = asBoolean(
+    process.env.AI_VERIFICATION_FAIL_OPEN,
+    asBoolean(aiVerificationProfileConfig.failOpen, true),
+);
+const aiVerificationStrictConfig = asBoolean(
+    process.env.AI_VERIFICATION_STRICT_CONFIG,
+    aiVerificationProfile !== "local",
+);
+const aiVerificationOwnerService = asNonEmptyString(
+    process.env.AI_VERIFICATION_OWNER_SERVICE,
+    asNonEmptyString(aiVerificationOwnersFromProfile.serviceOwner, ""),
+);
+const aiVerificationOwnerMl = asNonEmptyString(
+    process.env.AI_VERIFICATION_OWNER_ML,
+    asNonEmptyString(aiVerificationOwnersFromProfile.mlOwner, ""),
+);
+const aiVerificationOwnerOnCall = asNonEmptyString(
+    process.env.AI_VERIFICATION_OWNER_ONCALL,
+    asNonEmptyString(aiVerificationOwnersFromProfile.onCall, ""),
+);
+const aiVerificationRunbookPath = asNonEmptyString(
+    process.env.AI_VERIFICATION_RUNBOOK_PATH,
+    asNonEmptyString(
+        aiVerificationRunbookFromProfile.path,
+        "docs/platform/ai-verification-operations.md",
+    ),
+);
+const aiVerificationRunbookEscalation = asNonEmptyString(
+    process.env.AI_VERIFICATION_RUNBOOK_ESCALATION,
+    asNonEmptyString(aiVerificationRunbookFromProfile.escalation, ""),
+);
+
+/**
+ * Validate AI verification configuration for staging/prod profiles.
+ */
+const validateAiVerificationConfig = () => {
+    if (!aiVerificationStrictConfig) {
+        return;
+    }
+
+    if (!aiVerificationEnabled) {
+        throw new Error(
+            `AI_VERIFICATION_ENABLED must be true when AI_VERIFICATION_STRICT_CONFIG=true (profile=${aiVerificationProfile})`,
+        );
+    }
+
+    if (!aiVerificationServiceUrl) {
+        throw new Error(
+            "AI_VERIFICATION_URL must be configured when AI verification is enabled",
+        );
+    }
+
+    if (
+        aiVerificationProfile !== "local" &&
+        isLocalOnlyUrl(aiVerificationServiceUrl)
+    ) {
+        throw new Error(
+            `AI_VERIFICATION_URL cannot target local-only host in ${aiVerificationProfile} profile`,
+        );
+    }
+
+    if (aiVerificationTimeoutMs < 1000 || aiVerificationTimeoutMs > 30000) {
+        throw new Error(
+            "AI_VERIFICATION_TIMEOUT_MS must be between 1000 and 30000 in strict profile mode",
+        );
+    }
+
+    const missingOwners = [];
+    if (!aiVerificationOwnerService) {
+        missingOwners.push("AI_VERIFICATION_OWNER_SERVICE");
+    }
+    if (!aiVerificationOwnerMl) {
+        missingOwners.push("AI_VERIFICATION_OWNER_ML");
+    }
+    if (!aiVerificationOwnerOnCall) {
+        missingOwners.push("AI_VERIFICATION_OWNER_ONCALL");
+    }
+
+    if (missingOwners.length > 0) {
+        throw new Error(
+            `Missing required AI ownership metadata for strict profile mode: ${missingOwners.join(", ")}`,
+        );
+    }
+};
+
+validateAiVerificationConfig();
 
 /**
  * Runtime configuration for the API service.
@@ -369,17 +646,68 @@ export const config = {
     requestTimeoutMs: Number(process.env.REQUEST_TIMEOUT_MS ?? 10000),
 
     /**
+     * Direct document upload integration settings.
+     */
+    documentUpload: {
+        enabled: asBoolean(process.env.DOC_UPLOAD_ENABLED, false),
+        provider: asNonEmptyString(process.env.DOC_UPLOAD_PROVIDER, "mock"),
+        timeoutMs: asPositiveInt(process.env.DOC_UPLOAD_TIMEOUT_MS, 15000),
+        maxUploadBytes: asPositiveInt(
+            process.env.DOC_UPLOAD_MAX_BYTES,
+            5 * 1024 * 1024,
+        ),
+        requirePinned: asBoolean(process.env.DOC_UPLOAD_REQUIRE_PINNED, true),
+        allowedMediaTypes: {
+            packageImage: asCsvList(process.env.DOC_UPLOAD_PACKAGE_IMAGE_MEDIA_TYPES, [
+                "image/jpeg",
+                "image/png",
+                "image/webp",
+            ]),
+            qualityCert: asCsvList(process.env.DOC_UPLOAD_QUALITY_CERT_MEDIA_TYPES, [
+                "application/pdf",
+                "image/jpeg",
+                "image/png",
+            ]),
+        },
+        kubo: {
+            apiUrl: asNonEmptyString(
+                process.env.DOC_UPLOAD_KUBO_API_URL,
+                "http://127.0.0.1:5001",
+            ),
+            authToken: asNonEmptyString(
+                process.env.DOC_UPLOAD_KUBO_AUTH_TOKEN,
+                "",
+            ),
+        },
+        pinata: {
+            apiUrl: asNonEmptyString(
+                process.env.DOC_UPLOAD_PINATA_API_URL,
+                "https://api.pinata.cloud",
+            ),
+            jwt: asNonEmptyString(process.env.DOC_UPLOAD_PINATA_JWT, ""),
+        },
+    },
+
+    /**
      * Optional AI physical packaging verification integration.
      */
     aiVerification: {
         enabled: aiVerificationEnabled,
-        serviceUrl: requiredIf(
-            aiVerificationEnabled,
-            "AI_VERIFICATION_URL",
-            "",
-        ),
-        timeoutMs: asPositiveInt(process.env.AI_VERIFICATION_TIMEOUT_MS, 10000),
-        failOpen: asBoolean(process.env.AI_VERIFICATION_FAIL_OPEN, true),
+        profile: aiVerificationProfile,
+        profileFile: resolveFilePath(aiVerificationProfileFile),
+        strictConfig: aiVerificationStrictConfig,
+        serviceUrl: aiVerificationServiceUrl,
+        timeoutMs: aiVerificationTimeoutMs,
+        failOpen: aiVerificationFailOpen,
+        ownership: {
+            serviceOwner: aiVerificationOwnerService,
+            mlOwner: aiVerificationOwnerMl,
+            onCall: aiVerificationOwnerOnCall,
+        },
+        runbook: {
+            path: aiVerificationRunbookPath,
+            escalation: aiVerificationRunbookEscalation,
+        },
     },
 
     /**
@@ -498,6 +826,20 @@ export const config = {
                 "RegulatorMSP",
                 fabricOrganizationsFromProfile.Regulator,
             ),
+        },
+        distributorIdentityBridge: {
+            enabled: asBoolean(
+                process.env.FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_ENABLED,
+                asBoolean(distributorIdentityBridgeFromProfile.enabled, false),
+            ),
+            requireUnitForDistributor: asBoolean(
+                process.env.FABRIC_DISTRIBUTOR_IDENTITY_BRIDGE_REQUIRE_UNIT,
+                asBoolean(
+                    distributorIdentityBridgeFromProfile.requireUnitForDistributor,
+                    true,
+                ),
+            ),
+            units: distributorIdentityBridgeUnits,
         },
     },
 };

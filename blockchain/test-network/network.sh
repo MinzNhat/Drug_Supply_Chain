@@ -170,7 +170,7 @@ function createOrgs() {
     infoln "Creating Org1 Identities"
 
     set -x
-    cryptogen generate --config=./organizations/cryptogen/crypto-config-org1.yaml --output="organizations"
+    cryptogen generate --config=./organizations/cryptogen/crypto-config-regulator.yaml --output="organizations"
     res=$?
     { set +x; } 2>/dev/null
     if [ $res -ne 0 ]; then
@@ -180,7 +180,7 @@ function createOrgs() {
     infoln "Creating Org2 Identities"
 
     set -x
-    cryptogen generate --config=./organizations/cryptogen/crypto-config-org2.yaml --output="organizations"
+    cryptogen generate --config=./organizations/cryptogen/crypto-config-manufacturer.yaml --output="organizations"
     res=$?
     { set +x; } 2>/dev/null
     if [ $res -ne 0 ]; then
@@ -204,18 +204,18 @@ function createOrgs() {
 
     . organizations/cfssl/registerEnroll.sh
     #function_name cert-type   CN   org
-    peer_cert peer peer0.org1.example.com org1
-    peer_cert admin Admin@org1.example.com org1
+    peer_cert peer peer0.regulator.drugguard.vn org1
+    peer_cert admin Admin@regulator.drugguard.vn org1
 
     infoln "Creating Org2 Identities"
     #function_name cert-type   CN   org
-    peer_cert peer peer0.org2.example.com org2
-    peer_cert admin Admin@org2.example.com org2
+    peer_cert peer peer0.manufacturer.drugguard.vn org2
+    peer_cert admin Admin@manufacturer.drugguard.vn org2
 
     infoln "Creating Orderer Org Identities"
     #function_name cert-type   CN
-    orderer_cert orderer orderer.example.com
-    orderer_cert admin Admin@example.com
+    orderer_cert orderer orderer1.drugguard.vn
+    orderer_cert admin Admin@drugguard.vn
 
   fi
 
@@ -237,7 +237,7 @@ function createOrgs() {
     done
 
     # Make sure CA service is initialized and can accept requests before making register and enroll calls
-    export FABRIC_CA_CLIENT_HOME=${PWD}/organizations/peerOrganizations/org1.example.com/
+    export FABRIC_CA_CLIENT_HOME=${PWD}/organizations/peerOrganizations/regulator.drugguard.vn/
     COUNTER=0
     rc=1
     while [[ $rc -ne 0 && $COUNTER -lt $MAX_RETRY ]]; do
@@ -458,7 +458,7 @@ function networkDown() {
   # Don't remove the generated artifacts -- note, the ledgers are always removed
   if [ "$MODE" != "restart" ]; then
     # Bring down the network, deleting the volumes
-    ${CONTAINER_CLI} volume rm docker_orderer.example.com docker_peer0.org1.example.com docker_peer0.org2.example.com
+    ${CONTAINER_CLI} volume rm docker_orderer1.drugguard.vn docker_peer0.regulator.drugguard.vn docker_peer0.manufacturer.drugguard.vn
     #Cleanup the chaincode containers
     clearContainers
     #Cleanup images
@@ -479,6 +479,7 @@ function networkDown() {
 
 # use this as the default docker-compose yaml definition
 COMPOSE_FILE_BASE=compose-test-net.yaml
+MULTI_ORDERER=0
 # docker-compose.yaml file if you are using couchdb
 COMPOSE_FILE_COUCH=compose-couch.yaml
 # certificate authorities compose file
@@ -545,8 +546,13 @@ while [[ $# -ge 1 ]] ; do
     CHANNEL_NAME="$2"
     shift
     ;;
-  -bft )
+  -bft)
     BFT=1
+    shift
+    ;;
+  -mo)
+    MULTI_ORDERER=1
+    shift
     ;;
   -ca )
     CRYPTO="Certificate Authorities"
@@ -634,10 +640,13 @@ while [[ $# -ge 1 ]] ; do
   shift
 done
 
-if [ $BFT -eq 1 ]; then
-  export FABRIC_CFG_PATH=${PWD}/bft-config
-  COMPOSE_FILE_BASE=compose-bft-test-net.yaml
-fi
+  if [ "$BFT" == "1" ]; then
+    export FABRIC_CFG_PATH=${PWD}/bft-config
+    COMPOSE_FILE_BASE=compose-bft-test-net.yaml
+  elif [ "$MULTI_ORDERER" == "1" ]; then
+    export MULTI_ORDERER=1
+    COMPOSE_FILE_BASE=compose-multi-orderer.yaml
+  fi
 
 # Are we generating crypto material with this command?
 if [ ! -d "organizations/peerOrganizations" ]; then

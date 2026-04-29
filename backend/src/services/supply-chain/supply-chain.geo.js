@@ -127,14 +127,45 @@ export const listBatchSnapshots = async (filters, actor) => {
         ensureRoleAccessToMsp(actor, ownerMSP);
         query.ownerMSP = ownerMSP;
     } else if (actor.role !== "Regulator") {
-        query.ownerMSP = actor.mspId;
+        // Strict ID-based visibility: Only batches where actor is the current owner OR the intended receiver
+        query.$or = [
+            { ownerId: actor.id },
+            { targetOwnerId: actor.id },
+            { manufacturerId: actor.id }
+        ];
     }
+    
+    // Hierarchy Enforcement for Regulator
+    if (actor.role === "Regulator") {
+        if (actor.regulatorLevel === "LOW") {
+            // Low-level regulators are restricted to their province
+            query.province = actor.province;
+        } else if (filters.province) {
+            // High-level regulators can filter by any province if requested
+            query.province = String(filters.province);
+        }
+    }
+
+    if (filters.recallStatus) {
+        query.recallStatus = String(filters.recallStatus);
+    }
+
+    if (filters.search) {
+        const search = String(filters.search);
+        query.$or = [
+            { batchID: { $regex: search, $options: "i" } },
+            { drugName: { $regex: search, $options: "i" } },
+        ];
+    }
+
     if (filters.drugName) {
         query.drugName = {
             $regex: String(filters.drugName).trim(),
             $options: "i",
         };
     }
+
+    console.log(`[DEBUG] listBatchSnapshots: actorId=${actor.id}, role=${actor.role}, query=`, JSON.stringify(query));
 
     const [total, rows] = await Promise.all([
         BatchState.countDocuments(query),
@@ -144,6 +175,8 @@ export const listBatchSnapshots = async (filters, actor) => {
             .limit(pageSize)
             .lean(),
     ]);
+
+    console.log(`[DEBUG] listBatchSnapshots: Found ${rows.length} rows for actorId=${actor.id}`);
 
     return {
         page,
@@ -196,6 +229,7 @@ export const createBatchGeoEvent = async (batchID, input, actor) => {
         actorRole: actor.role,
         actorMSP: actor.mspId,
         actorUserId: actor.id,
+        province: input.province || actor.province || "",
         traceId: actor.traceId || "",
         occurredAt: toDateOrNull(input.occurredAt) || new Date(),
     });
@@ -337,18 +371,27 @@ export const aggregateSupplyHeatmap = async (query, actor) => {
         }
     }
 
+    const sortedBuckets = Array.from(buckets.values()).sort(
+        (a, b) => b.count - a.count,
+    );
+
+    // Compute max count for intensity normalization.
+    // intensity is a [0, 1] weight required by most FE heatmap libraries
+    // (Leaflet.heat, MapLibre GL heatmap layer) to correctly render density gradient.
+    const maxCount = sortedBuckets.length > 0 ? sortedBuckets[0].count : 1;
+
     return {
         precision,
         totalPoints: events.length,
-        buckets: Array.from(buckets.values())
-            .map((bucket) => ({
-                lat: bucket.lat,
-                lng: bucket.lng,
-                count: bucket.count,
-                eventTypes: Array.from(bucket.eventTypes),
-                sources: Array.from(bucket.sources),
-                lastOccurredAt: bucket.lastOccurredAt,
-            }))
-            .sort((a, b) => b.count - a.count),
+        buckets: sortedBuckets.map((bucket) => ({
+            lat: bucket.lat,
+            lng: bucket.lng,
+            count: bucket.count,
+            // Normalized weight in [0, 1] relative to the highest-density bucket.
+            intensity: maxCount > 0 ? bucket.count / maxCount : 0,
+            eventTypes: Array.from(bucket.eventTypes),
+            sources: Array.from(bucket.sources),
+            lastOccurredAt: bucket.lastOccurredAt,
+        })),
     };
 };

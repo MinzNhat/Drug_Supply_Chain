@@ -11,7 +11,7 @@ PeerOrgs:
   # Org3
   # ---------------------------------------------------------------------------
   - Name: Org3
-    Domain: org3.example.com
+    Domain: distributor.drugguard.vn
     EnableNodeOUs: true
     Template:
       Count: 1

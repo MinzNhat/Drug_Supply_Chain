@@ -20,6 +20,7 @@ export const errorHandler = (
     // Keep the 4th argument so Express treats this as error middleware.
     void next;
     const traceId = req.traceId ?? "unknown";
+    const traceIdAlias = traceId;
 
     if (err instanceof HttpException) {
         logger.warn({
@@ -35,6 +36,7 @@ export const errorHandler = (
                 code: err.code,
                 message: err.message,
                 traceId,
+                trace_id: traceIdAlias,
                 details: err.details,
             },
         });
@@ -55,6 +57,7 @@ export const errorHandler = (
             code: "INTERNAL_SERVER_ERROR",
             message,
             traceId,
+            trace_id: traceIdAlias,
         },
     });
 };

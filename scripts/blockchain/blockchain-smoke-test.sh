@@ -52,7 +52,7 @@ invoke_on_org() {
 
 	peer chaincode invoke \
 		-o localhost:7050 \
-		--ordererTLSHostnameOverride orderer.example.com \
+		--ordererTLSHostnameOverride orderer1.drugguard.vn \
 		--tls \
 		--cafile "$ORDERER_CA" \
 		-C "${CHANNEL_NAME}" \
@@ -119,7 +119,7 @@ main() {
 	echo "[7/8] ShipBatch to DistributorMSP"
 	invoke_on_org 2 "{\"function\":\"ShipBatch\",\"Args\":[\"${BATCH_ID}\",\"DistributorMSP\"]}"
 
-	if [[ -d "${TEST_NETWORK_HOME}/organizations/peerOrganizations/org3.example.com" ]]; then
+	if [[ -d "${TEST_NETWORK_HOME}/organizations/peerOrganizations/distributor.drugguard.vn" ]]; then
 		echo "[8/8] ReceiveBatch as Org3 (Distributor alias)"
 		invoke_on_org 3 "{\"function\":\"ReceiveBatch\",\"Args\":[\"${BATCH_ID}\"]}"
 	else

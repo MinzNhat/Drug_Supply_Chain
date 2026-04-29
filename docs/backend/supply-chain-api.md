@@ -125,10 +125,133 @@ Response shape:
 - `GET /batches/:batchId`
 - `POST /verify`
 - `POST /batches/:batchId/protected-qr/bind`
+- `POST /batches/:batchId/protected-qr/token-policy`
 - `POST /batches/:batchId/ship`
 - `POST /batches/:batchId/receive`
+- `POST /batches/:batchId/confirm-delivered-to-consumption`
 - `POST /batches/:batchId/documents`
 - `POST /batches/:batchId/recall`
+
+### 5.1) Document Upload Modes
+
+Endpoint:
+
+`POST /batches/:batchId/documents`
+
+Auth: Bearer token.
+
+Mode A - legacy CID mode (`application/json`):
+
+```json
+{
+  "docType": "qualityCert",
+  "newCID": "QmLegacyCid1234567890"
+}
+```
+
+Mode B - direct upload mode (`multipart/form-data`):
+
+- `docType`: `packageImage | qualityCert`
+- `document`: binary file
+
+Response includes ledger batch payload plus `upload` metadata block (`source`, `provider`, `pinStatus`, and integrity metadata for direct-upload mode).
+
+### 5.2) Protected QR Token Policy
+
+Endpoint:
+
+`POST /batches/:batchId/protected-qr/token-policy`
+
+Auth: Bearer token, role must be `Regulator`.
+
+Request body:
+
+```json
+{
+  "actionType": "BLOCKLIST",
+  "tokenDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "reason": "counterfeit signal confirmed",
+  "note": "manual review ticket #INC-42"
+}
+```
+
+Action semantics:
+
+- `BLOCKLIST`: temporary deny (verification returns rejected while status is blocked).
+- `REVOKE`: terminal deny for anchored digest.
+- `RESTORE`: allowed only when current policy status is `BLOCKLISTED`.
+
+Verification impact:
+
+- `POST /verify` receives policy-aware protected-QR result and rejects when digest is blocked/revoked.
+- Ledger verification record write is denied for blocked/revoked digest.
+
+### 5.3) Protected QR Bind Authorization
+
+Endpoint:
+
+`POST /batches/:batchId/protected-qr/bind`
+
+Auth: Bearer token, role must be `Manufacturer`.
+
+Additional ledger guard:
+
+- Caller must be current batch owner.
+- Caller MSP must be `ManufacturerMSP`.
+
+### 5.4) Inter-Distributor Transfer Semantics
+
+Ship endpoint:
+
+`POST /batches/:batchId/ship`
+
+Receive endpoint:
+
+`POST /batches/:batchId/receive`
+
+Auth: Bearer token.
+
+Ship request body:
+
+```json
+{
+  "targetOwnerMSP": "DistributorMSP",
+  "targetDistributorUnitId": "dist-unit-b"
+}
+```
+
+Rules:
+
+- `targetDistributorUnitId` is accepted only when `targetOwnerMSP` is `DistributorMSP`.
+- Distributor -> Distributor transfer requires `targetDistributorUnitId`.
+- Same-unit transfer is rejected (`SAME_DISTRIBUTOR_UNIT_TRANSFER_NOT_ALLOWED`).
+- Manufacturer -> Distributor transfer may specify `targetDistributorUnitId` to lock receiver unit identity at receive step.
+
+Audit fields in batch state:
+
+- `ownerUnitId`: current distributor unit owner when `ownerMSP=DistributorMSP`.
+- `targetOwnerUnitId`: expected receiver unit while `transferStatus=IN_TRANSIT`.
+- `transferHistory[].fromUnitId` and `transferHistory[].toUnitId` for unit-level traceability.
+
+### 5.5) Consumption Delivery Confirmation Gate
+
+Confirm endpoint:
+
+`POST /batches/:batchId/confirm-delivered-to-consumption`
+
+Auth: Bearer token, role must be `Distributor`.
+
+Rules:
+
+- Caller must be current batch owner.
+- Batch must not be in transit (`transferStatus=NONE`).
+- Confirmation is idempotent (repeated call returns current confirmed state).
+
+Verification gate behavior:
+
+- Before confirmation, `POST /verify` **proceeds but emits a `GovMonitor` warning event** on the ledger (`WARN_UNCONFIRMED_CONSUMPTION`). Scan count still increments and the response returns `verificationResult=SAFE`.
+- After confirmation, behavior is identical — scan count grows, threshold escalation remains active.
+- Pre-confirmation scans are surfaced to regulators through the `GovMonitor` event and alert taxonomy.
 
 ## 6) Regulator Alert APIs
 
@@ -214,7 +337,7 @@ Behavior:
 - `format=csv`: returns `text/csv` attachment.
 - Export metadata is published through baseline sink adapter (`logger` channel).
 
-## 7) Alert Sink Side Effects (P0-05)
+## 7) Alert Sink Side Effects
 
 Trigger points:
 

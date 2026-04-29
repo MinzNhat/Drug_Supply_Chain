@@ -2,6 +2,7 @@
 
 const {
     getClientMSP,
+    isCanonicalMSP,
     isOwnerOrRegulator,
     sameMSP,
     toCanonicalMSP,
@@ -11,16 +12,50 @@ const {
     assertHex,
     parseBoolean,
     parseConfidenceScore,
+    requireNonEmptyString,
 } = require("../helpers/validation");
-const { getBatchOrThrow, putBatch } = require("../repositories/batchRepository");
+const {
+    getBatchOrThrow,
+    putBatch,
+} = require("../repositories/batchRepository");
+
+const TOKEN_POLICY_BLOCKING_STATUSES = new Set(["BLOCKLISTED", "REVOKED"]);
+const TOKEN_POLICY_ACTIONS = new Set(["BLOCKLIST", "REVOKE", "RESTORE"]);
+
+function ensureTokenPolicy(protectedQr) {
+    const tokenPolicy = protectedQr.token_policy || {};
+
+    if (!Array.isArray(tokenPolicy.history)) {
+        tokenPolicy.history = [];
+    }
+
+    tokenPolicy.status = tokenPolicy.status || "ACTIVE";
+    tokenPolicy.token_digest = tokenPolicy.token_digest || "";
+    tokenPolicy.reason = tokenPolicy.reason || "";
+    tokenPolicy.note = tokenPolicy.note || "";
+    tokenPolicy.action_type = tokenPolicy.action_type || "NONE";
+    tokenPolicy.action_at = tokenPolicy.action_at || "";
+    tokenPolicy.action_by = tokenPolicy.action_by || "";
+    tokenPolicy.action_by_msp = tokenPolicy.action_by_msp || "";
+
+    protectedQr.token_policy = tokenPolicy;
+    return tokenPolicy;
+}
+
+function isBlockedByTokenPolicy(tokenPolicy, tokenDigest) {
+    return (
+        TOKEN_POLICY_BLOCKING_STATUSES.has(tokenPolicy.status) &&
+        tokenPolicy.token_digest === tokenDigest
+    );
+}
 
 /**
- * evaluateProtectedQrVerdict is a helper function that determines the verification verdict for a protected QR code based on its authenticity, confidence score, and the defined verification policy. It categorizes the QR code as "AUTHENTIC", "FAKE", or "REVIEW_REQUIRED" based on whether the authenticity and confidence score meet the thresholds specified in the verification policy.
+ * Determine the verification verdict for a protected QR based on AI authenticity and confidence.
  *
- * @param {boolean} isAuthentic - A boolean indicating whether the QR code is considered authentic based on the verification process.
- * @param {number} confidenceScore - A numerical score representing the confidence level of the authenticity assessment, typically ranging from 0 to 1.
- * @param {Object} verificationPolicy - An object containing the thresholds for determining the verdict, including "authentic_threshold" and "fake_threshold".
- * @returns {string} The verdict for the protected QR code, which can be "AUTHENTIC", "FAKE", or "REVIEW_REQUIRED" based on the evaluation against the verification policy.
+ * @param {boolean} isAuthentic - AI authenticity decision.
+ * @param {number} confidenceScore - AI confidence score (0–1).
+ * @param {Object} verificationPolicy - Thresholds: authentic_threshold, fake_threshold.
+ * @returns {string} "AUTHENTIC" | "FAKE" | "REVIEW_REQUIRED".
  */
 function evaluateProtectedQrVerdict(
     isAuthentic,
@@ -42,17 +77,16 @@ function evaluateProtectedQrVerdict(
 }
 
 /**
- * bindProtectedQR is a function that allows the current owner of a batch to bind protected QR code metadata to the batch. It validates the input parameters, updates the protected QR information in the batch, and emits an event to signal that the protected QR has been bound.
+ * Bind protected QR metadata to a batch (manufacturer owner only).
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state and client identity.
- * @param {string} batchID - The unique identifier of the batch to which the protected QR metadata will be bound.
- * @param {string} dataHash - A hexadecimal string representing the hash of the data associated with the protected QR code.
- * @param {string} metadataSeries - A hexadecimal string representing the series information for the protected QR code.
- * @param {string} metadataIssued - A hexadecimal string representing the issued timestamp for the protected QR code.
- * @param {string} metadataExpiry - A hexadecimal string representing the expiry timestamp for the protected QR code.
- * @param {string} tokenDigest - A hexadecimal string representing the digest of the token associated with the protected QR code.
- * @returns {string} A JSON string representation of the updated protected QR information after binding.
- * @throws Will throw an error if the caller is not the current owner, if any of the input parameters are invalid, or if there is an issue with updating the batch in the ledger.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Target batch identifier.
+ * @param {string} dataHash - Hex data hash of QR payload.
+ * @param {string} metadataSeries - Hex metadata series.
+ * @param {string} metadataIssued - Hex issued timestamp.
+ * @param {string} metadataExpiry - Hex expiry timestamp.
+ * @param {string} tokenDigest - Hex token digest.
+ * @returns {string} JSON-serialized updated protected QR state.
  */
 async function bindProtectedQR(
     ctx,
@@ -70,6 +104,12 @@ async function bindProtectedQR(
     if (!sameMSP(clientOrgID, batch.ownerMSP)) {
         throw new Error(
             "Denied: Only current owner can bind protected QR metadata.",
+        );
+    }
+
+    if (!sameMSP(clientOrgID, "ManufacturerMSP")) {
+        throw new Error(
+            "Denied: Only ManufacturerMSP can bind protected QR metadata.",
         );
     }
 
@@ -117,12 +157,11 @@ async function bindProtectedQR(
 }
 
 /**
- * readProtectedQR is a function that retrieves the protected QR code information associated with a batch. It uses the getBatchOrThrow helper function to fetch the batch and then returns the protected QR information as a JSON string.
+ * Read the protected QR state for a batch.
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state.
- * @param {string} batchID - The unique identifier of the batch whose protected QR information is being retrieved.
- * @returns {string} A JSON string representation of the protected QR information associated with the specified batch.
- * @throws Will throw an error if the batch does not exist in the ledger.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @returns {string} JSON-serialized protected QR object.
  */
 async function readProtectedQR(ctx, batchID) {
     const batch = await getBatchOrThrow(ctx, batchID);
@@ -131,24 +170,30 @@ async function readProtectedQR(ctx, batchID) {
 }
 
 /**
- * verifyProtectedQR is a function that performs a read-only check to verify if the provided token digest matches the anchored token digest in the protected QR information for a batch. It returns a JSON string indicating whether the token digest matches, along with relevant metadata about the anchored protected QR code.
+ * Read-only token digest match check against anchored protected QR data.
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state.
- * @param {string} batchID - The unique identifier of the batch whose protected QR information is being verified.
- * @param {string} tokenDigest - A hexadecimal string representing the token digest to be verified against the anchored protected QR information.
- * @returns {string} A JSON string containing the verification result, including whether the token digest matches, the anchored token digest, provided token digest, and metadata about the anchored protected QR code.
- * @throws Will throw an error if the batch does not exist in the ledger or if there is an issue with retrieving the batch information.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @param {string} tokenDigest - Hex token digest to verify.
+ * @returns {string} JSON-serialized match result with policy status.
  */
 async function verifyProtectedQR(ctx, batchID, tokenDigest) {
     const batch = await getBatchOrThrow(ctx, batchID);
     const protectedQr = batch.protected_qr;
     const normalizedTokenDigest = assertHex(tokenDigest, 64, "token_digest");
     const anchored = protectedQr.token_digest || "";
-    const matched = anchored !== "" && anchored === normalizedTokenDigest;
+    const digestMatched = anchored !== "" && anchored === normalizedTokenDigest;
+    const tokenPolicy = ensureTokenPolicy(protectedQr);
+    const policyBlocked =
+        digestMatched && isBlockedByTokenPolicy(tokenPolicy, normalizedTokenDigest);
+    const matched = digestMatched && !policyBlocked;
 
     const payload = {
         batch_id: batchID,
         matched,
+        digest_matched: digestMatched,
+        policy_blocked: policyBlocked,
+        policy_status: tokenPolicy.status,
         anchored_token_digest: anchored,
         provided_token_digest: normalizedTokenDigest,
         last_bound_at: protectedQr.last_bound_at,
@@ -156,6 +201,9 @@ async function verifyProtectedQR(ctx, batchID, tokenDigest) {
         verification_policy: protectedQr.verification_policy,
         // Backward-compatible aliases.
         batchID: batchID,
+        digestMatched,
+        policyBlocked,
+        policyStatus: tokenPolicy.status,
         anchoredTokenDigest: anchored,
         providedTokenDigest: normalizedTokenDigest,
         lastBoundAt: protectedQr.last_bound_at,
@@ -166,15 +214,14 @@ async function verifyProtectedQR(ctx, batchID, tokenDigest) {
 }
 
 /**
- * recordProtectedQRVerification is a function that allows the current owner or a regulator to record the results of a physical QR code verification process. It validates the input parameters, checks that the provided token digest matches the anchored token digest, evaluates the verification verdict based on the authenticity and confidence score, and then stores the verification record in the protected QR information for the batch. It also emits an event to signal that a protected QR verification has been recorded.
+ * Record physical QR verification evidence (owner or regulator only).
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state and client identity.
- * @param {string} batchID - The unique identifier of the batch for which the protected QR verification is being recorded.
- * @param {boolean} isAuthentic - A boolean indicating whether the physical QR code was verified as authentic.
- * @param {number} confidenceScore - A numerical score representing the confidence level of the authenticity assessment, typically ranging from 0 to 1.
- * @param {string} tokenDigest - A hexadecimal string representing the token digest that was verified during the physical QR code verification process.
- * @returns {string} A JSON string representation of the recorded verification information, including the verdict and relevant metadata.
- * @throws Will throw an error if the caller is not authorized, if the protected QR metadata is not bound, if the token digest does not match, or if there is an issue with updating the batch in
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @param {boolean} isAuthentic - AI/human authenticity decision.
+ * @param {number} confidenceScore - Confidence score (0–1).
+ * @param {string} tokenDigest - Hex token digest from verified QR.
+ * @returns {string} JSON-serialized recorded verification payload.
  */
 async function recordProtectedQRVerification(
     ctx,
@@ -203,6 +250,13 @@ async function recordProtectedQRVerification(
     if (normalizedTokenDigest !== protectedQr.token_digest) {
         throw new Error(
             "Denied: token_digest does not match the anchored protected QR digest.",
+        );
+    }
+
+    const tokenPolicy = ensureTokenPolicy(protectedQr);
+    if (isBlockedByTokenPolicy(tokenPolicy, normalizedTokenDigest)) {
+        throw new Error(
+            `Denied: token_digest is ${tokenPolicy.status} by regulator token policy.`,
         );
     }
 
@@ -243,9 +297,132 @@ async function recordProtectedQRVerification(
     return JSON.stringify(verificationRecord);
 }
 
+/**
+ * updateProtectedQRTokenPolicy updates protected QR token lifecycle policy.
+ */
+async function updateProtectedQRTokenPolicy(
+    ctx,
+    batchID,
+    actionType,
+    tokenDigest,
+    reason,
+    note,
+) {
+    const clientOrgID = getClientMSP(ctx);
+    if (!isCanonicalMSP(clientOrgID, "RegulatorMSP")) {
+        throw new Error(
+            "Denied: Only RegulatorMSP can update protected QR token policy.",
+        );
+    }
+
+    const batch = await getBatchOrThrow(ctx, batchID);
+    const protectedQr = batch.protected_qr;
+
+    if (!protectedQr.token_digest) {
+        throw new Error(
+            "Denied: Protected QR metadata is not bound for this batch.",
+        );
+    }
+
+    const normalizedActionType = requireNonEmptyString(
+        actionType,
+        "action_type",
+    ).toUpperCase();
+    if (!TOKEN_POLICY_ACTIONS.has(normalizedActionType)) {
+        throw new Error(
+            "Denied: action_type must be one of BLOCKLIST, REVOKE, RESTORE.",
+        );
+    }
+
+    const normalizedTokenDigest = assertHex(tokenDigest, 64, "token_digest");
+    if (normalizedTokenDigest !== protectedQr.token_digest) {
+        throw new Error(
+            "Denied: token_digest does not match the anchored protected QR digest.",
+        );
+    }
+
+    const normalizedReason = String(reason || "").trim();
+    const normalizedNote = String(note || "").trim();
+    if (
+        (normalizedActionType === "BLOCKLIST" ||
+            normalizedActionType === "REVOKE") &&
+        !normalizedReason
+    ) {
+        throw new Error(
+            `Denied: reason is required for ${normalizedActionType}.`,
+        );
+    }
+
+    const tokenPolicy = ensureTokenPolicy(protectedQr);
+    const statusBefore = tokenPolicy.status;
+    let statusAfter = statusBefore;
+
+    if (normalizedActionType === "BLOCKLIST") {
+        statusAfter = "BLOCKLISTED";
+    } else if (normalizedActionType === "REVOKE") {
+        statusAfter = "REVOKED";
+        batch.status = "SUSPICIOUS";
+    } else {
+        if (statusBefore !== "BLOCKLISTED") {
+            throw new Error(
+                "Denied: RESTORE is only allowed when token policy is BLOCKLISTED.",
+            );
+        }
+        statusAfter = "ACTIVE";
+    }
+
+    const actedAt = getTimestampISO(ctx);
+    const actedBy = ctx.clientIdentity.getID();
+    const actedByMsp = toCanonicalMSP(clientOrgID);
+
+    tokenPolicy.status = statusAfter;
+    tokenPolicy.token_digest = normalizedTokenDigest;
+    tokenPolicy.reason = normalizedReason;
+    tokenPolicy.note = normalizedNote;
+    tokenPolicy.action_type = normalizedActionType;
+    tokenPolicy.action_at = actedAt;
+    tokenPolicy.action_by = actedBy;
+    tokenPolicy.action_by_msp = actedByMsp;
+    tokenPolicy.history.push({
+        action_type: normalizedActionType,
+        status_before: statusBefore,
+        status_after: statusAfter,
+        token_digest: normalizedTokenDigest,
+        reason: normalizedReason,
+        note: normalizedNote,
+        acted_at: actedAt,
+        acted_by: actedBy,
+        acted_by_msp: actedByMsp,
+    });
+
+    await putBatch(ctx, batchID, batch);
+    await ctx.stub.setEvent(
+        "ProtectedQRTokenPolicyUpdated",
+        Buffer.from(
+            JSON.stringify({
+                batch_id: batchID,
+                action_type: normalizedActionType,
+                status_before: statusBefore,
+                status_after: statusAfter,
+                acted_by_msp: actedByMsp,
+                acted_at: actedAt,
+            }),
+        ),
+    );
+
+    return JSON.stringify({
+        batchID,
+        actionType: normalizedActionType,
+        policyStatus: statusAfter,
+        batchStatus: batch.status,
+    });
+}
+
 module.exports = {
     bindProtectedQR,
     readProtectedQR,
     verifyProtectedQR,
     recordProtectedQRVerification,
+    recordProtectedQrVerification: recordProtectedQRVerification,
+    updateProtectedQRTokenPolicy,
 };

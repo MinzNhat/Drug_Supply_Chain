@@ -1,139 +1,119 @@
 # Protected QR Service
 
-[![status: stable](https://img.shields.io/badge/status-stable-1f7a1f)](.)
-[![scope: protected-qr](https://img.shields.io/badge/scope-protected--qr-2b4c7e)](.)
+Fixed-geometry, copy-sensitive QR generator and verifier for pharmaceutical anti-counterfeit workflows.
 
-Fixed-Geometry Physical-Digital QR Generator. This service creates a deterministic, copy-sensitive QR with an embedded center pattern and returns a Base64 PNG for client-side rendering or storage. The geometry is fixed to preserve Error Correction Level H compatibility.
+## How It Works
 
-## Key Guarantees
-
-- Payload structure is fixed to 34 bytes.
-- Token length is ~81 chars: Base64Url(48) + "." + HMAC(32).
-- Output QR size is 600x600 px with border=1.
-- Center pattern crop for verification is 154x154 px.
-- Verification thresholds: authentic > 0.70, fake < 0.55.
-
-## Visual Demos
-
-The service embeds a unique, copy-sensitive "Center Pattern" into a standard QR code. This pattern acts as a physical-digital fingerprint, distinguishing it from standard, easily copyable QRs.
-
-<div align="center">
-  <table>
-    <tr>
-      <td align="center">
-        <img src="assets/qr-sample.png" width="250" alt="Standard Standard QR Code">
-        <br />
-        <sub><b>Figure 1A: Standard Generic QR</b><br>(Easily cloned)</sub>
-      </td>
-      <td align="center">
-        <img src="assets/qr-service-sample.png" width="250" alt="Protected QR with Center Pattern">
-        <br />
-        <sub><b>Figure 1B: Protected QR</b><br>(Copy-sensitive embedded pattern)</sub>
-      </td>
-    </tr>
-  </table>
-</div>
+The service embeds a unique center pattern into a standard QR code that acts as a physical-digital fingerprint. A standard QR can be trivially cloned; a Protected QR's center pattern degrades detectably when photocopied or re-printed, allowing the Python verifier to distinguish authentic originals from copies using confidence scores.
 
 ## Architecture
 
-- **Node.js API**: REST interface, validation, token packing, audit storage.
-- **Python Core**: Stateless QR generator and verifier using Base64 I/O.
-- **MongoDB**: Audit and verification logs.
+```mermaid
+sequenceDiagram
+    participant BE as Backend / Client
+    participant NG as Node.js Service :8080
+    participant PY as Python Core :8000
 
-## Project Layout
-
-```
-protected-qr-service/
-    docker/
-        Dockerfile.node
-        Dockerfile.python
-    python-core/
-        app.py
-        qr_center.py
-        qr_decoder.py
-        qr_protected.py
-        requirements.txt
-    src/
-        config/
-        controllers/
-        dtos/
-        middleware/
-        routes/
-        services/
-        utils/
-    docker-compose.yml
-    swagger.yaml
-    README.md
+    par Generate QR
+        BE->>NG: POST /api/v1/qr/generate<br/>(JSON)
+        NG->>PY: POST /generate-protected-qr<br/>(JSON)
+        PY-->>NG: Base64 PNG + Data
+        NG->>NG: Pack Token & Audit Log
+        NG-->>BE: { token, qrImageBase64 }
+    and Verify QR
+        BE->>NG: POST /api/v1/qr/verify<br/>(multipart: image)
+        NG->>PY: POST /verify-protected-qr<br/>(multipart: image)
+        PY-->>NG: confidenceScore + Result
+        NG->>NG: Audit Log (MongoDB)
+        NG-->>BE: { isAuthentic, confidenceScore, ... }
+    end
 ```
 
-## API Overview
+- **Node.js Service** (`protected-qr/`): request validation, HMAC token signing, audit log, MongoDB persistence.
+- **Python Core** (`protected-qr/python-core/`): stateless QR generation and center-pattern verification using image processing.
+- **MongoDB**: stores audit records and verification history for compliance.
 
-- `POST /api/v1/qr/generate`
-- `POST /api/v1/qr/verify`
-- `GET /health`
+---
 
-Swagger spec: [swagger.yaml](swagger.yaml)
+## Key Guarantees
 
-## Hex Input Format
+- QR payload is fixed at 34 bytes.
+- Token format: `Base64Url(48 bytes) + "." + HMAC-SHA256(32 bytes)` — approximately 81 characters.
+- Output QR image: 600×600 px, border=1, Error Correction Level H.
+- Center pattern crop used for verification: 154×154 px.
+- Verification thresholds: `authentic > 0.70`, `fake < 0.55` — values in between go to `REVIEW_REQUIRED`.
 
-All input fields must be hex strings of fixed length:
+---
 
-- `data_hash`: 8 hex chars (4 bytes)
-- `metadata_series`: 16 hex chars (8 bytes)
-- `metadata_issued`: 16 hex chars (8 bytes)
-- `metadata_expiry`: 16 hex chars (8 bytes)
+## API
 
-Example conversion guide:
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health probe |
+| `POST` | `/api/v1/qr/generate` | Generate Protected QR and HMAC token |
+| `POST` | `/api/v1/qr/verify` | Verify a scanned QR image |
 
-- 4 bytes (8 hex chars): `a1b2c3d4`
-- 8 bytes (16 hex chars): `1234567890abcdef`
+Full OpenAPI spec: [`swagger.yaml`](swagger.yaml)
 
-## Generate Example
+---
+
+## Hex Input Format (Generate)
+
+All input fields must be fixed-length hex strings:
+
+| Field | Length | Example |
+|-------|--------|---------|
+| `dataHash` | 8 hex chars (4 bytes) | `a1b2c3d4` |
+| `metadataSeries` | 16 hex chars (8 bytes) | `1234567890abcdef` |
+| `metadataIssued` | 16 hex chars (8 bytes) | `0011223344556677` |
+| `metadataExpiry` | 16 hex chars (8 bytes) | `8899aabbccddeeff` |
+
+### Generate Request
 
 ```json
 {
-  "data_hash": "a1b2c3d4",
-  "metadata_series": "1234567890abcdef",
-  "metadata_issued": "0011223344556677",
-  "metadata_expiry": "8899aabbccddeeff"
+  "dataHash": "a1b2c3d4",
+  "metadataSeries": "1234567890abcdef",
+  "metadataIssued": "0011223344556677",
+  "metadataExpiry": "8899aabbccddeeff"
 }
 ```
 
-## Verify Example
-
-`POST /api/v1/qr/verify` with multipart form-data field `image`.
-
-## Response Shapes
-
-Success response:
+### Generate Response
 
 ```json
 {
   "success": true,
   "data": {
     "token": "base64url.payload.hmac",
-    "qr_image_base64": "iVBORw0..."
+    "qrImageBase64": "iVBORw0..."
   }
 }
 ```
 
-Verification response:
+---
+
+## Verify
+
+`POST /api/v1/qr/verify` — multipart/form-data with field `image` (PNG/JPEG file).
+
+### Verify Response
 
 ```json
 {
   "token": "base64url.payload.hmac",
-  "is_authentic": true,
-  "confidence_score": 0.85,
-  "decoded_meta": {
-    "data_hash": "a1b2c3d4",
-    "metadata_series": "1234567890abcdef",
-    "metadata_issued": "0011223344556677",
-    "metadata_expiry": "8899aabbccddeeff"
+  "isAuthentic": true,
+  "confidenceScore": 0.85,
+  "decodedMeta": {
+    "dataHash": "a1b2c3d4",
+    "metadataSeries": "1234567890abcdef",
+    "metadataIssued": "0011223344556677",
+    "metadataExpiry": "8899aabbccddeeff"
   }
 }
 ```
 
-Error response:
+### Error Response
 
 ```json
 {
@@ -141,153 +121,82 @@ Error response:
   "error": {
     "code": "BAD_REQUEST",
     "message": "Invalid request body",
-    "trace_id": "4f838f6f-5a6e-4f9d-9f73-7c8152f0249d",
-    "details": {
-      "errors": {
-        "data_hash": ["Required"]
-      }
-    }
+    "traceId": "4f838f6f-5a6e-4f9d-9f73-7c8152f0249d",
+    "details": { "errors": { "dataHash": ["Required"] } }
   }
 }
 ```
 
-## Requirements
+---
 
-- Docker + Docker Compose
-- Node.js 18+
-- Python 3.9+
-
-## Deployment
+## Local Development
 
 ```bash
-docker-compose up -d --build
-```
-
-Services:
-
-- API: http://localhost:8080
-- Python core: http://localhost:8000
-- MongoDB: mongodb://localhost:27017
-
-## Installation
-
-```bash
-cd protected-qr-service
+# Node.js API
+cd protected-qr
 npm install
-```
-
-## Run (Production)
-
-```bash
-cd protected-qr-service
-npm run build
-npm run start
-```
-
-## Run (Development)
-
-Terminal 1 (Node API):
-
-```bash
-cd protected-qr-service
 npm run dev
-```
 
-Terminal 2 (Python core):
-
-```bash
-cd protected-qr-service/python-core
+# Python core (separate terminal)
+cd protected-qr/python-core
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8000
 ```
 
-## API Examples
-
-Generate:
+Or run via root Docker Compose:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/qr/generate \
-    -H "Content-Type: application/json" \
-    -d '{
-        "data_hash": "a1b2c3d4",
-        "metadata_series": "1234567890abcdef",
-        "metadata_issued": "0011223344556677",
-        "metadata_expiry": "8899aabbccddeeff"
-    }'
+./scripts/run-all.sh up
 ```
-
-Verify:
-
-```bash
-curl -X POST http://localhost:8080/api/v1/qr/verify \
-    -F "image=@/path/to/qr.png"
-```
-
-## Observability
-
-- Structured logs are emitted as JSON via Winston.
-- HTTP access logs use Morgan and flow into Winston.
-- Use your platform log aggregator (e.g., ELK, CloudWatch, Stackdriver) for indexing.
-
-## Environment Variables
-
-See [.env.example](.env.example).
-
-| Name                 | Required | Description                                                |
-| -------------------- | -------- | ---------------------------------------------------------- |
-| `PORT`               | Yes      | API HTTP port.                                             |
-| `MONGO_URI`          | Yes      | MongoDB connection string.                                 |
-| `MONGO_DB`           | Yes      | MongoDB database name.                                     |
-| `PYTHON_SERVICE_URL` | Yes      | Base URL for the Python core service.                      |
-| `HMAC_SECRET`        | Yes      | HMAC secret for token signing (or use `HMAC_SECRET_FILE`). |
-| `HMAC_SECRET_FILE`   | No       | File path containing HMAC secret.                          |
-| `LOG_LEVEL`          | No       | Log level for structured output.                           |
-| `REQUEST_TIMEOUT_MS` | No       | Timeout for Python core requests.                          |
-
-## Operational Notes
-
-- The QR geometry and thresholds are contract-bound and should not be modified.
-- The Python core is stateless and uses Base64 I/O only.
-- MongoDB stores audit logs and verification results for compliance.
-
-## Troubleshooting
-
-- If verification returns zero confidence, check image quality and ensure the QR is not cropped.
-- If the Python core fails to start, verify dependencies in [python-core/requirements.txt](python-core/requirements.txt).
-- If generate requests time out, increase `REQUEST_TIMEOUT_MS` in the environment.
-
-## Security Considerations
-
-- Rotate `HMAC_SECRET` regularly in production.
-- Place the API behind TLS and a rate limiter.
-- Use a private network for internal Python core access.
-
-## Bug Reports
-
-Found a bug? Please open an issue at [GitHub Issues](https://github.com/MinzNhat/Protected_QR/issues/new).
-
-## Feature Requests
-
-Have an idea for a new feature? Submit it at [GitHub Issues](https://github.com/MinzNhat/Protected_QR/issues/new).
-
-## License
-
-This project is licensed under the MIT License - see `docs/legal/protected-qr-license.txt` for details.
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/MinzNhat/Protected_QR/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/MinzNhat/Protected_QR/discussions)
-- **Email**: nhat.dang2004.cv@gmail.com
 
 ---
 
-<div align="center">
-  <p>Made with care by MinzNhat</p>
-  <p>
-    <a href="https://github.com/MinzNhat/Protected_QR">Star us on GitHub</a> •
-    <a href="https://yourdomain.com">Visit Website</a>
-  </p>
-</div>
+## curl Examples
+
+```bash
+# Generate
+curl -X POST http://localhost:8080/api/v1/qr/generate \
+  -H "Content-Type: application/json" \
+  -d '{"dataHash":"a1b2c3d4","metadataSeries":"1234567890abcdef","metadataIssued":"0011223344556677","metadataExpiry":"8899aabbccddeeff"}'
+
+# Verify
+curl -X POST http://localhost:8080/api/v1/qr/verify \
+  -F "image=@/path/to/qr.png"
+```
+
+---
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PORT` | Yes | API HTTP port (default: `8080`) |
+| `MONGO_URI` | Yes | MongoDB connection string |
+| `MONGO_DB` | Yes | MongoDB database name |
+| `PYTHON_SERVICE_URL` | Yes | Python core base URL |
+| `HMAC_SECRET` | Yes | HMAC signing secret (or `HMAC_SECRET_FILE`) |
+| `HMAC_SECRET_FILE` | No | File path containing the HMAC secret |
+| `LOG_LEVEL` | No | Log level for structured output |
+| `REQUEST_TIMEOUT_MS` | No | Timeout for Python core request calls |
+
+---
+
+## Operational Notes
+
+- QR geometry and verification thresholds are contract-bound — do not modify without coordinating with the backend's `VerifyProtectedQR` call chain.
+- The Python core is stateless; it accepts Base64 or multipart I/O only.
+- MongoDB stores audit logs per generation and verification event for compliance traceability.
+- Rotate `HMAC_SECRET` on a fixed schedule in production environments.
+
+---
+
+## Troubleshooting
+
+| Symptom | Resolution |
+|---------|-----------|
+| Verification returns zero confidence | Check image quality; ensure QR is not cropped or blurred |
+| Python core fails to start | Verify `requirements.txt` dependencies and Python version (3.9+) |
+| Generate requests time out | Increase `REQUEST_TIMEOUT_MS` in environment |
+| Token HMAC mismatch | `HMAC_SECRET` must be the same across all service instances and restarts |

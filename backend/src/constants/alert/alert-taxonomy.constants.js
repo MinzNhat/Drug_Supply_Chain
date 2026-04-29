@@ -10,6 +10,7 @@ export const CANONICAL_ALERT_KEYS = Object.freeze([
     "LEDGER_SCAN_SUSPICIOUS",
     "PROTECTED_QR_BOUND",
     "PROTECTED_QR_VERIFICATION_RECORDED",
+    "PROTECTED_QR_TOKEN_POLICY_UPDATED",
 ]);
 
 /**
@@ -23,6 +24,7 @@ export const ALERT_SEVERITY_BY_KEY = Object.freeze({
     LEDGER_SCAN_SUSPICIOUS: "critical",
     PROTECTED_QR_BOUND: "info",
     PROTECTED_QR_VERIFICATION_RECORDED: "info",
+    PROTECTED_QR_TOKEN_POLICY_UPDATED: "warn",
 });
 
 /**
@@ -42,7 +44,9 @@ export const CHAINCODE_EVENT_TO_CANONICAL_ALERT_KEY = Object.freeze({
     ProtectedQRBound: "PROTECTED_QR_BOUND",
     ProtectedQRVerificationRecorded: "PROTECTED_QR_VERIFICATION_RECORDED",
     RecallAlert: "RECALL_ALERT",
+    ProtectedQRTokenPolicyUpdated: "PROTECTED_QR_TOKEN_POLICY_UPDATED",
 });
+
 
 /**
  * Canonical outbound sink event IDs.

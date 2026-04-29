@@ -1,0 +1,16 @@
+{
+  "profile": "prod",
+  "enabled": true,
+  "serviceUrl": "https://ai-verifier.company.example",
+  "timeoutMs": 8000,
+  "failOpen": false,
+  "owners": {
+    "serviceOwner": "platform-backend@company.example",
+    "mlOwner": "ml-quality@company.example",
+    "onCall": "#supplychain-ai-prod"
+  },
+  "runbook": {
+    "path": "docs/platform/ai-verification-operations.md",
+    "escalation": "sev-incident-ai-verification"
+  }
+}

@@ -19,7 +19,7 @@ function requireNonEmptyString(value, fieldName) {
 }
 
 /**
- * requireOptionalString validates an optional string field. If the value is undefined or null, it returns an empty string. Otherwise, it converts the value to a string and trims it.
+ * requireOptionalString validates an optional string field. If the value is undefined or null, it returns an empty string. Otherwise, it converts the value to a string.
  *
  * @param {string} value - The input value to validate.
  * @returns {string} The normalized string value or an empty string if the input is undefined or null.
@@ -103,6 +103,7 @@ function parseConfidenceScore(value) {
  */
 function normalizeExpiryDate(expiryDate) {
     const normalizedExpiryDate = expiryDate ? String(expiryDate).trim() : "";
+
     if (
         normalizedExpiryDate &&
         Number.isNaN(Date.parse(normalizedExpiryDate))

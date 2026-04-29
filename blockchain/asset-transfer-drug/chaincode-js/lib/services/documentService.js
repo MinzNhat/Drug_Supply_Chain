@@ -2,17 +2,19 @@
 
 const { getClientMSP, sameMSP } = require("../helpers/identity");
 const { getTimestampISO } = require("../helpers/time");
-const { getBatchOrThrow, putBatch } = require("../repositories/batchRepository");
+const {
+    getBatchOrThrow,
+    putBatch,
+} = require("../repositories/batchRepository");
 
 /**
- * updateDocument is a function that allows the current owner of a batch to update the document information associated with that batch. It checks if the caller is the current owner, validates the new CID, updates the document information in the batch, and emits an event for pinning the new document.
+ * Update a batch document CID (current owner only).
  *
- * @param {Context} ctx - The transaction context provided by the Fabric runtime, which includes access to the ledger state and client identity.
- * @param {string} batchID - The unique identifier of the batch whose document is being updated.
- * @param {string} docType - The type of document being updated (e.g., "certificateOfAnalysis").
- * @param {string} newCID - The new Content Identifier (CID) for the document.
- * @returns {string} A JSON string representation of the updated batch object after the document update.
- * @throws Will throw an error if the caller is not the current owner, if the new CID is invalid, or if the document type is unsupported.
+ * @param {Context} ctx - Fabric transaction context.
+ * @param {string} batchID - Batch identifier.
+ * @param {string} docType - Document type key (e.g. "packageImage", "qualityCert").
+ * @param {string} newCID - New IPFS content identifier.
+ * @returns {string} JSON-serialized updated batch.
  */
 async function updateDocument(ctx, batchID, docType, newCID) {
     const batch = await getBatchOrThrow(ctx, batchID);

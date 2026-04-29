@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 FABRIC_SAMPLES_HOME="${ROOT_DIR}/blockchain"
 TEST_NETWORK_HOME="${TEST_NETWORK_HOME:-${FABRIC_SAMPLES_HOME}/test-network}"
 export FABRIC_CFG_PATH="${FABRIC_SAMPLES_HOME}/config"
-export PATH="${FABRIC_SAMPLES_HOME}/bin:${PATH}"
+export PATH="${FABRIC_SAMPLES_HOME}/bin:${FABRIC_SAMPLES_HOME}/test-network/bin:${PATH}"
 
 MODE="${1:-full}"
 CHANNEL_NAME="${CHANNEL_NAME:-mychannel}"
@@ -89,7 +89,7 @@ check_prereqs() {
 up_channel() {
 	(
 		cd "${TEST_NETWORK_HOME}"
-		./network.sh up createChannel -c "${CHANNEL_NAME}"
+		./network.sh up createChannel -c "${CHANNEL_NAME}" -mo
 	)
 }
 
@@ -102,7 +102,7 @@ deploy_chaincode() {
 		CC_LANG="${CC_LANG}" \
 		CC_SRC_PATH="${CC_SRC_PATH}" \
 		TEST_NETWORK_HOME="${TEST_NETWORK_HOME}" \
-			"${ROOT_DIR}/scripts/blockchain/update-code-centralized.sh"
+			"${SCRIPT_DIR}/update-code-centralized.sh"
 	)
 }
 
@@ -110,7 +110,7 @@ down_network() {
 	(
 		cd "${TEST_NETWORK_HOME}"
 		./network.sh down 2> >(
-			grep -E -v '^Error response from daemon: get docker_(orderer\.example\.com|peer0\.org1\.example\.com|peer0\.org2\.example\.com): no such volume$' >&2
+			grep -E -v '^Error response from daemon: get docker_(orderer1\.drugguard\.vn|peer0\.regulator\.drugguard\.vn|peer0\.manufacturer\.drugguard\.vn): no such volume$' >&2
 		)
 	)
 

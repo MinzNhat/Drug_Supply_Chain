@@ -1,0 +1,15 @@
+services:
+  qr-python-core:
+    pull_policy: never
+
+  qr-service:
+    pull_policy: never
+
+  ai-python-core:
+    pull_policy: never
+
+  ai-service:
+    pull_policy: never
+
+  backend:
+    pull_policy: never

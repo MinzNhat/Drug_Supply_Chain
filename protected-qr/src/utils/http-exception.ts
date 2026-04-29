@@ -56,10 +56,14 @@ export class HttpException extends Error {
         this.status = status;
         this.code = code;
         this.details = payload;
+        const legacyTraceId =
+            payload && typeof payload.trace_id === "string"
+                ? payload.trace_id
+                : undefined;
         this.traceId =
             payload && typeof payload.traceId === "string"
                 ? payload.traceId
-                : undefined;
+                : legacyTraceId;
     }
 }
 

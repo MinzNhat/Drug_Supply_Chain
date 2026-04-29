@@ -1,0 +1,16 @@
+{
+  "profile": "local",
+  "enabled": false,
+  "serviceUrl": "http://localhost:8701",
+  "timeoutMs": 10000,
+  "failOpen": true,
+  "owners": {
+    "serviceOwner": "backend-platform@local",
+    "mlOwner": "ai-team@local",
+    "onCall": "oncall-local"
+  },
+  "runbook": {
+    "path": "docs/platform/ai-verification-operations.md",
+    "escalation": "local-dev-channel"
+  }
+}

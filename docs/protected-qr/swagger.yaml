@@ -63,27 +63,27 @@ components:
         GenerateRequest:
             type: object
             properties:
-                data_hash:
+                dataHash:
                     type: string
                     description: Hex string (8 chars = 4 bytes)
                     example: a1b2c3d4
-                metadata_series:
+                metadataSeries:
                     type: string
                     description: Hex string (16 chars = 8 bytes)
                     example: 1234567890abcdef
-                metadata_issued:
+                metadataIssued:
                     type: string
                     description: Hex string (16 chars = 8 bytes)
                     example: 0011223344556677
-                metadata_expiry:
+                metadataExpiry:
                     type: string
                     description: Hex string (16 chars = 8 bytes)
                     example: 8899aabbccddeeff
             required:
-                - data_hash
-                - metadata_series
-                - metadata_issued
-                - metadata_expiry
+                - dataHash
+                - metadataSeries
+                - metadataIssued
+                - metadataExpiry
         GenerateResponse:
             type: object
             properties:
@@ -96,7 +96,7 @@ components:
                         token:
                             type: string
                             example: base64url.payload.hmac
-                        qr_image_base64:
+                        qrImageBase64:
                             type: string
                             description: PNG image base64
         ErrorResponse:
@@ -108,34 +108,48 @@ components:
                 error:
                     type: object
                     properties:
+                        code:
+                            type: string
+                            example: BAD_REQUEST
                         message:
                             type: string
                             example: Invalid request body
+                        traceId:
+                            type: string
+                            example: 4f838f6f-5a6e-4f9d-9f73-7c8152f0249d
+                        trace_id:
+                            type: string
+                            description: Deprecated compatibility alias of traceId.
+                            example: 4f838f6f-5a6e-4f9d-9f73-7c8152f0249d
                         details:
                             type: object
                             additionalProperties: true
         VerifyResponse:
             type: object
             properties:
-                is_authentic:
+                token:
+                    type: string
+                    nullable: true
+                    example: base64url.payload.hmac
+                isAuthentic:
                     type: boolean
                     example: true
-                confidence_score:
+                confidenceScore:
                     type: number
                     example: 0.85
-                decoded_meta:
+                decodedMeta:
                     type: object
                     nullable: true
                     properties:
-                        data_hash:
+                        dataHash:
                             type: string
                             example: a1b2c3d4
-                        metadata_series:
+                        metadataSeries:
                             type: string
                             example: 1234567890abcdef
-                        metadata_issued:
+                        metadataIssued:
                             type: string
                             example: 0011223344556677
-                        metadata_expiry:
+                        metadataExpiry:
                             type: string
                             example: 8899aabbccddeeff

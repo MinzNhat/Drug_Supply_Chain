@@ -1,0 +1,30 @@
+services:
+  qr-python-core:
+    image: "${DATN_STAGING_QR_PYTHON_IMAGE:?DATN_STAGING_QR_PYTHON_IMAGE is required}"
+    pull_policy: always
+
+  qr-service:
+    image: "${DATN_STAGING_QR_SERVICE_IMAGE:?DATN_STAGING_QR_SERVICE_IMAGE is required}"
+    pull_policy: always
+    environment:
+      HMAC_SECRET: ""
+      HMAC_SECRET_FILE: /run/secrets/qr_hmac_secret
+    volumes:
+      - ${DATN_STAGING_SECRET_DIR:-.tmp/deploy/secrets}/qr:/run/secrets:ro
+
+  ai-python-core:
+    image: "${DATN_STAGING_AI_PYTHON_IMAGE:?DATN_STAGING_AI_PYTHON_IMAGE is required}"
+    pull_policy: always
+
+  ai-service:
+    image: "${DATN_STAGING_AI_SERVICE_IMAGE:?DATN_STAGING_AI_SERVICE_IMAGE is required}"
+    pull_policy: always
+
+  backend:
+    image: "${DATN_STAGING_BACKEND_IMAGE:?DATN_STAGING_BACKEND_IMAGE is required}"
+    pull_policy: always
+    environment:
+      JWT_SECRET: ""
+      JWT_SECRET_FILE: /run/secrets/backend_jwt_secret
+    volumes:
+      - ${DATN_STAGING_SECRET_DIR:-.tmp/deploy/secrets}/backend:/run/secrets:ro

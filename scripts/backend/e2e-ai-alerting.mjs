@@ -63,12 +63,19 @@ const assertStatus = (label, response, expectedStatus) => {
  * @param {"Manufacturer" | "Distributor" | "Regulator"} role - Role name.
  * @param {"ManufacturerMSP" | "DistributorMSP" | "RegulatorMSP"} mspId - MSP identifier.
  */
-const register = async (request, username, role, mspId) => {
+const register = async (
+    request,
+    username,
+    role,
+    mspId,
+    distributorUnitId = "",
+) => {
     const response = await request.post("/auth/register", {
         username,
         password: PASSWORD,
         role,
         mspId,
+        distributorUnitId,
     });
     assertStatus(`register ${username}`, response, 201);
 };
@@ -116,6 +123,8 @@ const setupActors = async (baseUrl, scenarioTag) => {
     const request = createRequest(baseUrl);
     const now = Date.now();
     const manufacturerUsername = `manu_${scenarioTag}_${now}`;
+    const distributorUsername = `dist_${scenarioTag}_${now}`;
+    const distributorUnitId = `dist-unit-${scenarioTag}`;
     const regulatorUsername = `reg_${scenarioTag}_${now}`;
 
     await register(
@@ -124,20 +133,76 @@ const setupActors = async (baseUrl, scenarioTag) => {
         "Manufacturer",
         "ManufacturerMSP",
     );
+    await register(
+        request,
+        distributorUsername,
+        "Distributor",
+        "DistributorMSP",
+        distributorUnitId,
+    );
     await register(request, regulatorUsername, "Regulator", "RegulatorMSP");
 
     const manufacturerToken = await login(request, manufacturerUsername);
+    const distributorToken = await login(request, distributorUsername);
     const regulatorToken = await login(request, regulatorUsername);
 
     return {
         request,
         manufacturerToken,
+        distributorToken,
+        distributorUnitId,
         regulatorToken,
         users: {
             manufacturerUsername,
+            distributorUsername,
             regulatorUsername,
         },
     };
+};
+
+/**
+ * Move batch to distributor ownership and confirm delivery to consumption point.
+ */
+const confirmDeliveryToConsumption = async (
+    request,
+    batchId,
+    manufacturerToken,
+    distributorToken,
+    distributorUnitId,
+) => {
+    const shipResponse = await request.post(
+        `/batches/${batchId}/ship`,
+        {
+            targetOwnerMSP: "DistributorMSP",
+            targetDistributorUnitId: distributorUnitId,
+        },
+        {
+            headers: authHeader(manufacturerToken),
+        },
+    );
+    assertStatus("ship for consumption confirmation", shipResponse, 200);
+
+    const receiveResponse = await request.post(
+        `/batches/${batchId}/receive`,
+        {},
+        {
+            headers: authHeader(distributorToken),
+        },
+    );
+    assertStatus("receive for consumption confirmation", receiveResponse, 200);
+
+    const confirmResponse = await request.post(
+        `/batches/${batchId}/confirm-delivered-to-consumption`,
+        {},
+        {
+            headers: authHeader(distributorToken),
+        },
+    );
+    assertStatus("confirm delivered to consumption", confirmResponse, 200);
+
+    if (confirmResponse.data?.data?.consumptionConfirmed !== true) {
+        fail("consumption confirmation mismatch", confirmResponse.data);
+    }
 };
 
 /**
@@ -206,12 +271,27 @@ const verifyWithPackagingImage = async (baseUrl, qrImageBase64) => {
  * @returns {Promise<Record<string, unknown>>} Scenario summary.
  */
 const runRejectAndReportScenario = async () => {
-    const { request, manufacturerToken, regulatorToken, users } =
+    const {
+        request,
+        manufacturerToken,
+        distributorToken,
+        distributorUnitId,
+        regulatorToken,
+        users,
+    } =
         await setupActors(AI_REJECT_BASE_URL, "ai_reject");
     const { batchId, qrImageBase64 } = await createBatch(
         request,
         manufacturerToken,
         "AI Reject",
+    );
+
+    await confirmDeliveryToConsumption(
+        request,
+        batchId,
+        manufacturerToken,
+        distributorToken,
+        distributorUnitId,
     );
 
     const verifyResponse = await verifyWithPackagingImage(
@@ -348,7 +428,12 @@ const runRejectAndReportScenario = async () => {
  * @returns {Promise<Record<string, unknown>>} Scenario summary.
  */
 const runFailOpenScenario = async () => {
-    const { request, manufacturerToken } = await setupActors(
+    const {
+        request,
+        manufacturerToken,
+        distributorToken,
+        distributorUnitId,
+    } = await setupActors(
         AI_FAIL_OPEN_BASE_URL,
         "ai_fail_open",
     );
@@ -356,6 +441,14 @@ const runFailOpenScenario = async () => {
         request,
         manufacturerToken,
         "AI Fail Open",
+    );
+
+    await confirmDeliveryToConsumption(
+        request,
+        batchId,
+        manufacturerToken,
+        distributorToken,
+        distributorUnitId,
     );
 
     const verifyResponse = await verifyWithPackagingImage(
@@ -390,14 +483,27 @@ const runFailOpenScenario = async () => {
  * @returns {Promise<Record<string, unknown>>} Scenario summary.
  */
 const runFailCloseScenario = async () => {
-    const { request, manufacturerToken } = await setupActors(
+    const {
+        request,
+        manufacturerToken,
+        distributorToken,
+        distributorUnitId,
+    } = await setupActors(
         AI_FAIL_CLOSE_BASE_URL,
         "ai_fail_close",
     );
-    const { qrImageBase64 } = await createBatch(
+    const { batchId, qrImageBase64 } = await createBatch(
         request,
         manufacturerToken,
         "AI Fail Close",
+    );
+
+    await confirmDeliveryToConsumption(
+        request,
+        batchId,
+        manufacturerToken,
+        distributorToken,
+        distributorUnitId,
     );
 
     const verifyResponse = await verifyWithPackagingImage(

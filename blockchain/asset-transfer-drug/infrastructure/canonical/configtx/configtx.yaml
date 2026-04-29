@@ -10,7 +10,7 @@ Organizations:
   - &Regulator
     Name: RegulatorMSP
     ID: RegulatorMSP
-    MSPDir: ../organizations/peerOrganizations/regulator.example.com/msp
+    MSPDir: ../organizations/peerOrganizations/regulator.drugguard.vn/msp
     Policies:
       Readers:
         Type: Signature
@@ -25,13 +25,13 @@ Organizations:
         Type: Signature
         Rule: "OR('RegulatorMSP.peer', 'RegulatorMSP.admin')"
     AnchorPeers:
-      - Host: peer0.regulator.example.com
+      - Host: peer0.regulator.drugguard.vn
         Port: 7051
 
   - &Manufacturer
     Name: ManufacturerMSP
     ID: ManufacturerMSP
-    MSPDir: ../organizations/peerOrganizations/manufacturer.example.com/msp
+    MSPDir: ../organizations/peerOrganizations/manufacturer.drugguard.vn/msp
     Policies:
       Readers:
         Type: Signature
@@ -46,13 +46,13 @@ Organizations:
         Type: Signature
         Rule: "OR('ManufacturerMSP.peer')"
     AnchorPeers:
-      - Host: peer0.manufacturer.example.com
+      - Host: peer0.manufacturer.drugguard.vn
         Port: 9051
 
   - &Distributor
     Name: DistributorMSP
     ID: DistributorMSP
-    MSPDir: ../organizations/peerOrganizations/distributor.example.com/msp
+    MSPDir: ../organizations/peerOrganizations/distributor.drugguard.vn/msp
     Policies:
       Readers:
         Type: Signature
@@ -102,9 +102,9 @@ Application: &ApplicationDefaults
 Orderer: &OrdererDefaults
   OrdererType: etcdraft
   Addresses:
-    - orderer0.regulator.example.com:7050
-    - orderer1.regulator.example.com:8050
-    - orderer2.regulator.example.com:9050
+    - orderer0.regulator.drugguard.vn:7050
+    - orderer1.regulator.drugguard.vn:8050
+    - orderer2.regulator.drugguard.vn:9050
   BatchTimeout: 2s
   BatchSize:
     MaxMessageCount: 500
@@ -112,18 +112,18 @@ Orderer: &OrdererDefaults
     PreferredMaxBytes: 2 MB
   EtcdRaft:
     Consenters:
-      - Host: orderer0.regulator.example.com
+      - Host: orderer0.regulator.drugguard.vn
         Port: 7050
-        ClientTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer0.regulator.example.com/tls/server.crt
-        ServerTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer0.regulator.example.com/tls/server.crt
-      - Host: orderer1.regulator.example.com
+        ClientTLSCert: ../organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer0.regulator.drugguard.vn/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer0.regulator.drugguard.vn/tls/server.crt
+      - Host: orderer1.regulator.drugguard.vn
         Port: 8050
-        ClientTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer1.regulator.example.com/tls/server.crt
-        ServerTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer1.regulator.example.com/tls/server.crt
-      - Host: orderer2.regulator.example.com
+        ClientTLSCert: ../organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer1.regulator.drugguard.vn/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer1.regulator.drugguard.vn/tls/server.crt
+      - Host: orderer2.regulator.drugguard.vn
         Port: 9050
-        ClientTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer2.regulator.example.com/tls/server.crt
-        ServerTLSCert: ../organizations/ordererOrganizations/regulator.example.com/orderers/orderer2.regulator.example.com/tls/server.crt
+        ClientTLSCert: ../organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer2.regulator.drugguard.vn/tls/server.crt
+        ServerTLSCert: ../organizations/ordererOrganizations/regulator.drugguard.vn/orderers/orderer2.regulator.drugguard.vn/tls/server.crt
   Organizations:
     - *Regulator
   Policies:

@@ -1,0 +1,39 @@
+name: api-doc-consistency
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - backend/**
+      - protected-qr/**
+      - ai-service/**
+      - docs/backend/**
+      - docs/protected-qr/**
+      - docs/ai-service/**
+      - scripts/ci/validate-api-doc-consistency.sh
+      - .github/workflows/api-doc-consistency.yml
+  pull_request:
+    paths:
+      - backend/**
+      - protected-qr/**
+      - ai-service/**
+      - docs/backend/**
+      - docs/protected-qr/**
+      - docs/ai-service/**
+      - scripts/ci/validate-api-doc-consistency.sh
+      - .github/workflows/api-doc-consistency.yml
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate API docs and schema consistency
+        run: bash scripts/ci/validate-api-doc-consistency.sh

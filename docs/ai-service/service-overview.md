@@ -1,31 +1,51 @@
-# AI Service
+# AI Verification Service
 
-[![status: stable](https://img.shields.io/badge/status-stable-1f7a1f)](.)
-[![scope: ai-service](https://img.shields.io/badge/scope-ai--service-2b4c7e)](.)
-
-DrugGuard AI appearance service validates product packaging images for counterfeit risk.
+Packaging appearance verification service using YOLOv8 to detect counterfeit drug packaging.
 
 ## Architecture
 
-- Node API gateway (`ai-service`): stable REST contract for backend and clients.
-- Python core (`ai-python-core`): YOLO inference runtime.
-- Model volume: `ai-service/models/best.pt` mounted read-only.
+```mermaid
+sequenceDiagram
+    participant BE as Backend API
+    participant NG as Node.js AI Gateway :8701
+    participant PY as Python Core YOLOv8 :8700
+
+    BE->>NG: POST /api/v1/verify<br/>(multipart: packagingImage field)
+    NG->>PY: POST /verify<br/>(multipart: image field)
+    PY->>PY: YOLOv8 inference<br/>decision_policy.py
+    PY-->>NG: Classification result
+    NG->>NG: Normalize response
+    NG-->>BE: { accepted, confidence_score, verdict, ... }
+```
+
+- **Node.js Gateway** (`ai-service/`): request validation, timeout, structured logging, response normalization.
+- **Python Core** (`ai-service/python-core/`): stateless YOLOv8 inference runtime, receives and returns multipart or JSON.
+- **Model**: `ai-service/models/best.pt` — YOLOv8 weights file, mounted read-only into the container.
+
+---
 
 ## Key Guarantees
 
-- Verify endpoint accepts one multipart image (`image`).
+- Verify endpoint accepts one multipart image field named `image`.
 - Response always includes `accepted`, `confidence_score`, and `verdict`.
-- Strict policy defaults for regulated supply-chain screening:
+- Default decision thresholds for regulated supply-chain screening:
   - `AI_CONFIDENCE_THRESHOLD=0.5`
   - `AI_COUNTERFEIT_MIN_SCORE=0.6`
   - `AI_AUTHENTIC_MIN_SCORE=0.75`
+- Backend integrates in **fail-open** mode by default: if the AI service is unavailable, the verification flow continues without AI result.
 
-## API Overview
+---
 
-- `GET /health`
-- `POST /api/v1/verify`
+## API
 
-Swagger spec: [swagger.yaml](swagger.yaml)
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health probe for orchestration |
+| `POST` | `/api/v1/verify` | Analyse one packaging image |
+
+Full OpenAPI spec: [`swagger.yaml`](swagger.yaml)
+
+---
 
 ## Verify Response Example
 
@@ -52,13 +72,27 @@ Swagger spec: [swagger.yaml](swagger.yaml)
 }
 ```
 
-## Runtime Dependencies
+---
 
-- Node.js 18+
-- Python 3.10+
-- Docker + Docker Compose
+## Model File Setup
 
-## Local Run
+> **Required**: `best.pt` is not committed to the repository due to file size.
+
+```bash
+# Place the weights file in the expected location
+cp /path/to/best.pt ai-service/models/best.pt
+```
+
+Model sources:
+- Colab training notebook: [DrugDetect Colab](https://colab.research.google.com/drive/1G1wb-Ey-QxtFyHttCPUBxQZorBoYFYMG)
+- HuggingFace Space: [tranhungquoc/DrugDetect](https://huggingface.co/spaces/tranhungquoc/DrugDetect)
+- Dataset: [Medicine Logo Detection — Roboflow](https://universe.roboflow.com/medicine-logo-classification/medicine-logo-detection/dataset/2)
+
+---
+
+## Local Development
+
+Node.js gateway:
 
 ```bash
 cd ai-service
@@ -66,7 +100,7 @@ npm install
 npm run dev
 ```
 
-Python core in separate terminal:
+Python core (separate terminal):
 
 ```bash
 cd ai-service/python-core
@@ -76,18 +110,57 @@ pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8700
 ```
 
-## Test Commands
-
-Node gateway unit tests:
+Or run the full stack via Docker Compose from repository root:
 
 ```bash
-cd ai-service
-npm test
+./scripts/run-all.sh up
 ```
 
-Python decision policy tests:
+---
+
+## Tests
 
 ```bash
-cd ai-service
-npm run test:policy
+# Node.js gateway unit tests
+cd ai-service && npm test
+
+# Python decision policy tests
+cd ai-service && npm run test:policy
 ```
+
+---
+
+## Environment Variables
+
+### Node.js Gateway (`ai-service/.env`)
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `PORT` | Yes | `8701` | Node API port |
+| `PYTHON_SERVICE_URL` | Yes | `http://localhost:8700` | Python core base URL |
+| `LOG_LEVEL` | No | `info` | Log level |
+| `REQUEST_TIMEOUT_MS` | No | `10000` | Timeout for Node → Python calls |
+
+### Python Core
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `AI_MODEL_PATH` | Yes | `/models/best.pt` | YOLOv8 weights path |
+| `AI_INFERENCE_DEVICE` | No | `cpu` | Inference device (`cpu`, `mps`, `cuda:0`) |
+| `AI_CONFIDENCE_THRESHOLD` | No | `0.5` | Minimum detection confidence |
+| `AI_COUNTERFEIT_MIN_SCORE` | No | `0.6` | Minimum score to flag as counterfeit |
+| `AI_AUTHENTIC_MIN_SCORE` | No | `0.75` | Minimum score required to accept as authentic |
+| `AI_COUNTERFEIT_LABELS` | No | `counterfeit,fake,gia` | Comma-separated counterfeit class labels |
+| `AI_AUTHENTIC_LABELS` | No | `authentic,genuine,real` | Comma-separated authentic class labels |
+
+---
+
+## Backend Integration
+
+The backend activates the AI verification lane when:
+- `AI_VERIFICATION_ENABLED=true` (backend environment variable)
+- The `/verify` request includes a `packagingImage` multipart field
+
+If the AI service is unavailable and `AI_VERIFICATION_FAIL_OPEN=true` (default), the verification flow proceeds without an AI result.
+
+See: [`docs/backend/integration-contract.md`](../backend/integration-contract.md)

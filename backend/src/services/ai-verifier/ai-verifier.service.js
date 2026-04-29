@@ -91,9 +91,7 @@ export class AiVerifierService {
             contentType: "image/png",
         });
 
-        const headers = {
-            ...form.getHeaders(),
-        };
+        const headers = form.getHeaders();
 
         if (traceId) {
             headers["x-trace-id"] = traceId;

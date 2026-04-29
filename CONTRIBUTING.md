@@ -12,7 +12,7 @@ This workspace uses a root-orchestrated development model for three domains:
 - Keep protocol boundary translation in mappers.
 - Keep transport-level concerns (HTTP schema, status code, auth headers) in routes/controllers/middleware.
 - Keep shell orchestration centralized in `scripts/`.
-- Keep documentation in `docs/` and operational memory in `agent-memory/`.
+- Keep documentation in `docs/`.
 
 ### Commenting standard
 
@@ -55,12 +55,10 @@ Before merging integration-sensitive changes:
 
 ## 4. Definition Of Done
 
-- Code follows conventions in `docs/backend/conventions.md`.
-- Code and process also follow `docs/platform/repository-development-standard.md`.
-- Relevant tests pass.
+- Code follows naming and layering conventions described in `docs/backend/integration-contract.md`.
+- Relevant tests pass (backend unit + chaincode unit).
 - No broken runtime flow in root orchestrator.
-- Documentation is updated when API/behavior changes.
-- Memory notes in `agent-memory/` are updated for architecture or process decisions.
+- Documentation is updated when API or behavior changes.
 
 ## 5. Repository Governance Note
 

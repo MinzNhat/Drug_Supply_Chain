@@ -3,30 +3,45 @@
   "channelName": "mychannel",
   "chaincodeName": "drugtracker",
   "publicScanRole": "Regulator",
+  "distributorIdentityBridge": {
+    "enabled": false,
+    "requireUnitForDistributor": true,
+    "units": {
+      "dist-unit-hcm": {
+        "identityLabel": "Distributor Unit HCM",
+        "mspId": "DistributorMSP",
+        "peerEndpoint": "host.docker.internal:11051",
+        "peerHostAlias": "peer0.distributor.drugguard.vn",
+        "tlsCertPath": "/fabric/organizations/peerOrganizations/distributor.drugguard.vn/peers/peer0.distributor.drugguard.vn/tls/ca.crt",
+        "certPath": "/fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/signcerts/User1@distributor.drugguard.vn-cert.pem",
+        "keyPath": "/fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/keystore"
+      }
+    }
+  },
   "organizations": {
     "Manufacturer": {
-      "mspId": "Org2MSP",
+      "mspId": "ManufacturerMSP",
       "peerEndpoint": "host.docker.internal:9051",
-      "peerHostAlias": "peer0.org2.example.com",
-      "tlsCertPath": "/fabric/organizations/peerOrganizations/org2.example.com/peers/peer0.org2.example.com/tls/ca.crt",
-      "certPath": "/fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/signcerts/User1@org2.example.com-cert.pem",
-      "keyPath": "/fabric/organizations/peerOrganizations/org2.example.com/users/User1@org2.example.com/msp/keystore"
+      "peerHostAlias": "peer0.manufacturer.drugguard.vn",
+      "tlsCertPath": "/fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/peers/peer0.manufacturer.drugguard.vn/tls/ca.crt",
+      "certPath": "/fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/signcerts/User1@manufacturer.drugguard.vn-cert.pem",
+      "keyPath": "/fabric/organizations/peerOrganizations/manufacturer.drugguard.vn/users/User1@manufacturer.drugguard.vn/msp/keystore"
     },
     "Distributor": {
-      "mspId": "Org3MSP",
+      "mspId": "DistributorMSP",
       "peerEndpoint": "host.docker.internal:11051",
-      "peerHostAlias": "peer0.org3.example.com",
-      "tlsCertPath": "/fabric/organizations/peerOrganizations/org3.example.com/peers/peer0.org3.example.com/tls/ca.crt",
-      "certPath": "/fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/signcerts/User1@org3.example.com-cert.pem",
-      "keyPath": "/fabric/organizations/peerOrganizations/org3.example.com/users/User1@org3.example.com/msp/keystore"
+      "peerHostAlias": "peer0.distributor.drugguard.vn",
+      "tlsCertPath": "/fabric/organizations/peerOrganizations/distributor.drugguard.vn/peers/peer0.distributor.drugguard.vn/tls/ca.crt",
+      "certPath": "/fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/signcerts/User1@distributor.drugguard.vn-cert.pem",
+      "keyPath": "/fabric/organizations/peerOrganizations/distributor.drugguard.vn/users/User1@distributor.drugguard.vn/msp/keystore"
     },
     "Regulator": {
-      "mspId": "Org1MSP",
+      "mspId": "RegulatorMSP",
       "peerEndpoint": "host.docker.internal:7051",
-      "peerHostAlias": "peer0.org1.example.com",
-      "tlsCertPath": "/fabric/organizations/peerOrganizations/org1.example.com/peers/peer0.org1.example.com/tls/ca.crt",
-      "certPath": "/fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/signcerts/User1@org1.example.com-cert.pem",
-      "keyPath": "/fabric/organizations/peerOrganizations/org1.example.com/users/User1@org1.example.com/msp/keystore"
+      "peerHostAlias": "peer0.regulator.drugguard.vn",
+      "tlsCertPath": "/fabric/organizations/peerOrganizations/regulator.drugguard.vn/peers/peer0.regulator.drugguard.vn/tls/ca.crt",
+      "certPath": "/fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/signcerts/User1@regulator.drugguard.vn-cert.pem",
+      "keyPath": "/fabric/organizations/peerOrganizations/regulator.drugguard.vn/users/User1@regulator.drugguard.vn/msp/keystore"
     }
   }
 }
