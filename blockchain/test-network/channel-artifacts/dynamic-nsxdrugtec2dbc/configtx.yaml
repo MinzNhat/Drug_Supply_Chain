@@ -1,0 +1,21 @@
+Organizations:
+  - &nsxdrugtec2dbc
+    Name: nsxdrugtec2dbcMSP
+    ID: nsxdrugtec2dbcMSP
+    MSPDir: /app/blockchain/test-network/organizations/peerOrganizations/nsxdrugtec2dbc.drugguard.vn/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('nsxdrugtec2dbcMSP.admin', 'nsxdrugtec2dbcMSP.peer', 'nsxdrugtec2dbcMSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('nsxdrugtec2dbcMSP.admin', 'nsxdrugtec2dbcMSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('nsxdrugtec2dbcMSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('nsxdrugtec2dbcMSP.peer')"
+    AnchorPeers:
+        - Host: peer0.nsxdrugtec2dbc.drugguard.vn
+          Port: 20351

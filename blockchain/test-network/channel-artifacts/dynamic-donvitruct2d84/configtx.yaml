@@ -1,0 +1,21 @@
+Organizations:
+  - &donvitruct2d84
+    Name: donvitruct2d84MSP
+    ID: donvitruct2d84MSP
+    MSPDir: /app/blockchain/test-network/organizations/peerOrganizations/donvitruct2d84.drugguard.vn/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('donvitruct2d84MSP.admin', 'donvitruct2d84MSP.peer', 'donvitruct2d84MSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('donvitruct2d84MSP.admin', 'donvitruct2d84MSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('donvitruct2d84MSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('donvitruct2d84MSP.peer')"
+    AnchorPeers:
+        - Host: peer0.donvitruct2d84.drugguard.vn
+          Port: 20551

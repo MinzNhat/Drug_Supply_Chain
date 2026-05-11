@@ -89,12 +89,12 @@ export class LedgerRepository {
  * @param {string} status - Ledger batch status.
  * @returns {{ level: string, code: string, message: string }} Safety status payload.
  */
-export const resolveSafetyStatus = (status) => {
+export const resolveSafetyStatus = (status, transferStatus = "") => {
     if (status === "RECALLED") {
         return {
             level: "DANGER",
             code: "DANGER_RECALLED",
-            message: "Batch has been recalled",
+            message: "Lô hàng đã bị thu hồi bởi cơ quan quản lý",
         };
     }
 
@@ -102,21 +102,39 @@ export const resolveSafetyStatus = (status) => {
         return {
             level: "DANGER",
             code: "DANGER_FAKE",
-            message: "Batch flagged as suspicious",
+            message: "Lô hàng bị đánh dấu là nghi ngờ hàng giả",
         };
     }
 
-    if (status === "WARNING") {
+    // New logic: Check if the product has actually reached the market
+    if (status === "ACTIVE") {
+        if (transferStatus === "MINTED" || transferStatus === "CREATED") {
+            return {
+                level: "WARNING",
+                code: "NOT_IN_MARKET",
+                message: "Sản phẩm mới được khởi tạo, chưa xuất kho nhà máy",
+            };
+        }
+        if (transferStatus === "IN_TRANSIT" || transferStatus === "SHIPPED") {
+            return {
+                level: "WARNING",
+                code: "IN_TRANSIT",
+                message: "Sản phẩm đang được vận chuyển, chưa sẵn sàng để bán",
+            };
+        }
+    }
+
+    if (status === "MINTED") {
         return {
             level: "WARNING",
-            code: "WARNING_THRESHOLD",
-            message: "Batch exceeded warning threshold",
+            code: "NOT_IN_MARKET",
+            message: "Sản phẩm chưa được đưa ra lưu thông (Đang ở nhà máy)",
         };
     }
 
     return {
         level: "OK",
         code: "OK",
-        message: "Batch is active",
+        message: "Sản phẩm hợp lệ và đã sẵn sàng sử dụng",
     };
 };

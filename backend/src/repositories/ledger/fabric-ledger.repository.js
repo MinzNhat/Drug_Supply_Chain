@@ -73,12 +73,12 @@ export class FabricLedgerRepository extends LedgerRepository {
     }
 
     /** Verify one batch on ledger and derive API safety status mapping. */
-    async verifyBatch(actor, batchID) {
+    async verifyBatch(actor, batchID, isInternal = false) {
         ensureActor(actor);
         const payload = await this.fabricGatewayClient.submit(
             actor,
             "VerifyBatch",
-            [batchID],
+            [batchID, String(isInternal)],
             actor.traceId,
         );
 
@@ -87,7 +87,7 @@ export class FabricLedgerRepository extends LedgerRepository {
 
         return {
             batch,
-            safetyStatus: resolveSafetyStatus(batch.status),
+            safetyStatus: resolveSafetyStatus(batch.status, batch.transferStatus),
         };
     }
 
@@ -192,10 +192,16 @@ export class FabricLedgerRepository extends LedgerRepository {
     /** Put batch into in-transit state toward receiver MSP. */
     async shipBatch(actor, batchID, receiverMSP, receiverUnitId = "", targetOwnerId = "") {
         ensureActor(actor);
+        
+        // Final mapping of MSP aliases to actual Fabric MSP IDs if needed
+        const normalizedReceiverMSP = receiverMSP === "Distributor" ? "DistributorMSP" : 
+                                     receiverMSP === "Manufacturer" ? "ManufacturerMSP" : 
+                                     receiverMSP === "Regulator" ? "RegulatorMSP" : receiverMSP;
+
         const payload = await this.fabricGatewayClient.submit(
             actor,
             "ShipBatch",
-            [batchID, receiverMSP, actor.distributorUnitId || "", receiverUnitId, targetOwnerId],
+            [batchID, normalizedReceiverMSP, actor.distributorUnitId || "", receiverUnitId, targetOwnerId],
             actor.traceId,
         );
         const batch = parseBatchPayload(payload);

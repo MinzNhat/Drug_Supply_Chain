@@ -116,23 +116,45 @@ export const listBatchSnapshots = async (filters, actor) => {
     const pageSize = Math.min(100, Math.max(1, Number(filters.pageSize ?? 20)));
 
     const query = {};
-    if (filters.status) {
+    
+    const visibilityAnd = [];
+
+    // Part 1: Status filtering
+    // Default visibility for non-regulators: hide RECALLED batches unless explicitly requested
+    // OR if the actor is the manufacturer of the batch (so they can track their own recalls)
+    if (actor.role !== "Regulator" && !filters.status) {
+        visibilityAnd.push({
+            $or: [
+                { status: { $ne: "RECALLED" } },
+                { manufacturerId: actor.id },
+                { manufacturerMSP: actor.mspId }
+            ]
+        });
+    } else if (filters.status) {
         query.status = String(filters.status);
     }
+
     if (filters.transferStatus) {
         query.transferStatus = String(filters.transferStatus);
     }
+
     if (filters.ownerMSP) {
         const ownerMSP = String(filters.ownerMSP);
         ensureRoleAccessToMsp(actor, ownerMSP);
         query.ownerMSP = ownerMSP;
     } else if (actor.role !== "Regulator") {
-        // Strict ID-based visibility: Only batches where actor is the current owner OR the intended receiver
-        query.$or = [
-            { ownerId: actor.id },
-            { targetOwnerId: actor.id },
-            { manufacturerId: actor.id }
-        ];
+        // Strict ID-based visibility: Only batches where actor is the current owner OR the intended receiver OR the manufacturer
+        visibilityAnd.push({
+            $or: [
+                { ownerId: actor.id },
+                { targetOwnerId: actor.id },
+                { manufacturerId: actor.id }
+            ]
+        });
+    }
+
+    if (visibilityAnd.length > 0) {
+        query.$and = visibilityAnd;
     }
     
     // Hierarchy Enforcement for Regulator

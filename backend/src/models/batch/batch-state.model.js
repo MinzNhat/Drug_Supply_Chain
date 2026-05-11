@@ -29,8 +29,10 @@ const batchStateSchema = new Schema(
         recallRequestedById: { type: String, default: "" },
         recallRequestedAt: { type: Date, default: null },
         recallNote: { type: String, default: "" },
+        consumptionConfirmed: { type: Boolean, default: false, index: true },
         lastLedgerSyncAt: { type: Date, default: Date.now, index: true },
         batch: { type: Schema.Types.Mixed, required: true },
+        metadata: { type: Schema.Types.Mixed, default: {} },
     },
     { timestamps: true },
 );

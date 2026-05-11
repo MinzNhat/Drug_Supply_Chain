@@ -188,15 +188,13 @@ export const createAuthController = () => {
         }
 
         const passwordHash = await bcrypt.hash(parsed.data.password, 12);
-        const distributorUnitId = normalizeDistributorUnitId(
-            parsed.data.distributorUnitId,
-        );
-        const user = await User.create({
+        
+        // Use the MongoDB ID directly as the blockchain identity fields
+        const user = new User({
             username: parsed.data.username,
             password: passwordHash,
             role: parsed.data.role,
             mspId: normalizedMspId,
-            distributorUnitId,
             businessName: parsed.data.businessName,
             address: parsed.data.address,
             taxId: parsed.data.taxId,
@@ -205,6 +203,13 @@ export const createAuthController = () => {
             province: parsed.data.province,
             status: parsed.data.status || "APPROVED",
         });
+
+        // Use EXACT MongoDB ID for Distributor Unit Identification
+        if (user.role === "Distributor") {
+            user.distributorUnitId = user._id.toString();
+        }
+
+        await user.save();
 
         await auditLog({
             level: "info",

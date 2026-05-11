@@ -162,7 +162,6 @@ export const createProductRoutes = () => {
         upload.fields([
             { name: "qrImage", maxCount: 1 },
             { name: "frontImage", maxCount: 1 },
-            { name: "backImage", maxCount: 1 },
         ]),
         controller.verifyProduct,
     );
@@ -186,6 +185,8 @@ export const createProductRoutes = () => {
         "/reports",
         upload.fields([
             { name: "paymentBill", maxCount: 1 },
+            { name: "qrImage", maxCount: 1 },
+            { name: "drugImage", maxCount: 1 },
             { name: "additionalImage", maxCount: 1 },
         ]),
         controller.submitReport,

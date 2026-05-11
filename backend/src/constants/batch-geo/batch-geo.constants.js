@@ -15,6 +15,7 @@ export const BATCH_GEO_EVENT_TYPES = Object.freeze([
     "RECALL",
     "RECALL_ALERT",
     "INSPECTION",
+    "CONSUME",
 ]);
 
 /**

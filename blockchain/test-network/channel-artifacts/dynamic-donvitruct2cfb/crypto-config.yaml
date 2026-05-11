@@ -1,0 +1,11 @@
+PeerOrgs:
+  - Name: donvitruct2cfb
+    Domain: donvitruct2cfb.drugguard.vn
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - peer0.donvitruct2cfb.drugguard.vn
+    Users:
+      Count: 1

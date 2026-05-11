@@ -1,0 +1,11 @@
+PeerOrgs:
+  - Name: nsxdrugtec2dbc
+    Domain: nsxdrugtec2dbc.drugguard.vn
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - peer0.nsxdrugtec2dbc.drugguard.vn
+    Users:
+      Count: 1

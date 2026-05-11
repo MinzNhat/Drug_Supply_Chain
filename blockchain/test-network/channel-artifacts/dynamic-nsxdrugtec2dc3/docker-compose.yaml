@@ -1,0 +1,45 @@
+networks:
+  test:
+    name: fabric_test
+    external: true
+
+services:
+  peer0.nsxdrugtec2dc3.drugguard.vn:
+    container_name: peer0.nsxdrugtec2dc3.drugguard.vn
+    image: hyperledger/fabric-peer:latest
+    labels:
+      service: hyperledger-fabric
+    environment:
+      - FABRIC_CFG_PATH=/etc/hyperledger/fabric
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_PROFILE_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_PEER_ID=peer0.nsxdrugtec2dc3.drugguard.vn
+      - CORE_PEER_ADDRESS=peer0.nsxdrugtec2dc3.drugguard.vn:20051
+      - CORE_PEER_MSPCONFIGPATH=/etc/hyperledger/fabric/msp
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:20051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.nsxdrugtec2dc3.drugguard.vn:20052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:20052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.nsxdrugtec2dc3.drugguard.vn:20051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.nsxdrugtec2dc3.drugguard.vn:20051
+      - CORE_PEER_LOCALMSPID=nsxdrugtec2dc3MSP
+      - CORE_METRICS_PROVIDER=prometheus
+      - CORE_OPERATIONS_LISTENADDRESS=0.0.0.0:9443
+    volumes:
+      - /Users/minznhat/Desktop/DATN/blockchain/test-network/organizations/peerOrganizations/nsxdrugtec2dc3.drugguard.vn/peers/peer0.nsxdrugtec2dc3.drugguard.vn/msp:/etc/hyperledger/fabric/msp
+      - /Users/minznhat/Desktop/DATN/blockchain/test-network/organizations/peerOrganizations/nsxdrugtec2dc3.drugguard.vn/peers/peer0.nsxdrugtec2dc3.drugguard.vn/tls:/etc/hyperledger/fabric/tls
+      - /Users/minznhat/Desktop/DATN/blockchain/config/core.yaml:/etc/hyperledger/fabric/core.yaml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - peer0.nsxdrugtec2dc3.drugguard.vn:/var/hyperledger/production
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    ports:
+      - 20051:20051
+    networks:
+      - test
+
+volumes:
+  peer0.nsxdrugtec2dc3.drugguard.vn:

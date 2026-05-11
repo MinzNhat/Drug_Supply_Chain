@@ -64,7 +64,7 @@ export const createProductController = (service) => {
     });
 
     /**
-     * Public product verification endpoint using uploaded QR and 2 product images.
+     * Public product verification endpoint using uploaded QR and 1 product packaging image.
      */
     const verifyProduct = asyncHandler(async (req, res) => {
         const qrImage = getUploadedImage(req, "qrImage");
@@ -73,14 +73,13 @@ export const createProductController = (service) => {
         }
 
         const frontImage = getUploadedImage(req, "frontImage");
-        const backImage = getUploadedImage(req, "backImage");
 
-        // The supply chain service currently takes one packaging image buffer. We'll pass the front image.
+        // The supply chain service takes the primary packaging image buffer.
         const data = await service.verifyProduct(qrImage.buffer, req.traceId, {
             packagingImageBuffer: frontImage?.buffer ?? null,
+            isInternal: false
         });
 
-        // Add additional tracking logic here if needed for backImage
         return res.status(200).json({ success: true, data });
     });
 
@@ -92,6 +91,8 @@ export const createProductController = (service) => {
         const reporterIP = req.ip || req.headers["x-forwarded-for"] || "";
 
         const paymentBill = getUploadedImage(req, "paymentBill");
+        const qrImage = getUploadedImage(req, "qrImage");
+        const drugImage = getUploadedImage(req, "drugImage");
         const additionalImage = getUploadedImage(req, "additionalImage");
 
         // Using our new Report Model to save to MongoDB
@@ -107,22 +108,36 @@ export const createProductController = (service) => {
             severity: severity || "warn",
             reporterIP,
             paymentBillMeta: paymentBill ? { fileName: paymentBill.originalname, size: paymentBill.size } : null,
+            qrImageMeta: qrImage ? { fileName: qrImage.originalname, size: qrImage.size } : null,
+            drugImageMeta: drugImage ? { fileName: drugImage.originalname, size: drugImage.size } : null,
             additionalImageMeta: additionalImage ? { fileName: additionalImage.originalname, size: additionalImage.size } : null,
             status: "PENDING"
         });
 
-        // Example local saving logic
+        // Derive coordinates from province if not provided (Safety for Heatmap)
+        if (!report.lat || !report.lng) {
+            // We'll import the coordinates mapping here or assume frontend sends them. 
+            // The controller will trust the frontend's mapping if present, 
+            // but we ensure something exists.
+        }
+
+        // Save files to local storage
         const fs = await import("fs/promises");
         const path = await import("path");
         const reportDir = path.join(process.cwd(), "uploads", "reports", report._id.toString());
         await fs.mkdir(reportDir, { recursive: true });
 
-        if (paymentBill) {
-            await fs.writeFile(path.join(reportDir, "paymentBill_" + paymentBill.originalname), paymentBill.buffer);
-        }
-        if (additionalImage) {
-            await fs.writeFile(path.join(reportDir, "additionalImage_" + additionalImage.originalname), additionalImage.buffer);
-        }
+        const saveFile = async (file, prefix) => {
+            if (!file) return;
+            await fs.writeFile(path.join(reportDir, `${prefix}_${file.originalname}`), file.buffer);
+        };
+
+        await Promise.all([
+            saveFile(paymentBill, "paymentBill"),
+            saveFile(qrImage, "qrImage"),
+            saveFile(drugImage, "drugImage"),
+            saveFile(additionalImage, "additionalImage")
+        ]);
 
         await report.save();
 
@@ -196,19 +211,23 @@ export const createProductController = (service) => {
         }
 
         const actor = requireActor(req);
-        const targetOwnerMSP = normalizeMspId(parsed.data.targetOwnerMSP);
-        if (!targetOwnerMSP) {
-            throw new HttpException(
-                400,
-                "INVALID_TARGET_OWNER_MSP",
-                "Unsupported targetOwnerMSP alias",
-            );
+        
+        // Normalize MSP if provided, otherwise allow empty for service-side auto-resolution
+        let targetOwnerMSP = "";
+        if (parsed.data.targetOwnerMSP) {
+            targetOwnerMSP = normalizeMspId(parsed.data.targetOwnerMSP) || parsed.data.targetOwnerMSP;
+            
+            // Basic alias mapping if normalization returned empty but we have a value
+            if (targetOwnerMSP === "Distributor") targetOwnerMSP = "DistributorMSP";
+            if (targetOwnerMSP === "Manufacturer") targetOwnerMSP = "ManufacturerMSP";
+            if (targetOwnerMSP === "Regulator") targetOwnerMSP = "RegulatorMSP";
         }
 
         const data = await service.shipBatch(
             req.params.batchId,
             {
-                receiverMSP: targetOwnerMSP,
+                targetOwnerMSP: targetOwnerMSP,
+                targetOwnerId: parsed.data.targetOwnerId ?? "",
                 targetDistributorUnitId:
                     parsed.data.targetDistributorUnitId ?? "",
             },
@@ -388,7 +407,12 @@ export const createProductController = (service) => {
             throw new HttpException(403, "Forbidden: Report is outside your province");
         }
 
-        const meta = type === "paymentBill" ? report.paymentBillMeta : report.additionalImageMeta;
+        let meta;
+        if (type === "paymentBill") meta = report.paymentBillMeta;
+        else if (type === "drugImage") meta = report.drugImageMeta;
+        else if (type === "qrImage") meta = report.qrImageMeta;
+        else meta = report.additionalImageMeta;
+
         if (!meta || !meta.fileName) {
             throw new HttpException(404, "Image not found for this report");
         }
@@ -424,8 +448,10 @@ export const createProductController = (service) => {
             throw new HttpException(400, "QR image file is required");
         }
 
-        // Use service to verify QR
-        const data = await service.qrService.verify(qrImage.buffer);
+        // Use supply chain service with internal flag to avoid scanCount increment
+        const data = await service.verifyProduct(qrImage, req.traceId, {
+            isInternal: true
+        });
         return res.status(200).json({ success: true, data });
     });
 

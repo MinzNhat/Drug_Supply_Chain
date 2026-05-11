@@ -182,6 +182,8 @@ run_up() {
     wait_for_http "http://localhost:8700/health" 80 2
     wait_for_http "http://localhost:8701/health" 80 2
     wait_for_http "http://localhost:8090/health" 80 2
+    
+    run_setup_data
 
     echo "Stack is ready."
 }
@@ -242,6 +244,12 @@ run_status() {
     docker ps --format '{{.Names}}\t{{.Status}}' | grep -E 'orderer|peer0\.org|ca_org|chaincode' || true
 }
 
+run_setup_data() {
+    echo "Setting up initial admin and province data..."
+    docker exec drug-guard-backend node /app/scripts/create-admin.mjs
+    docker exec drug-guard-backend node /app/scripts/seed-provinces.mjs
+}
+
 main() {
     need_cmd docker
     need_cmd curl
@@ -293,8 +301,7 @@ main() {
             run_status
             ;;
         setup-admin)
-            echo "Setting up initial admin users..."
-            docker exec drug-guard-backend node /app/scripts/create-admin.mjs
+            run_setup_data
             ;;
         *)
             echo "Unknown mode: ${MODE}"

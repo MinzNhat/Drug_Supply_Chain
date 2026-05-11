@@ -1,0 +1,11 @@
+PeerOrgs:
+  - Name: giaohangnh2dd7
+    Domain: giaohangnh2dd7.drugguard.vn
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - peer0.giaohangnh2dd7.drugguard.vn
+    Users:
+      Count: 1

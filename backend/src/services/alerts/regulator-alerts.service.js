@@ -295,6 +295,10 @@ export class RegulatorAlertsService {
             else if (a.canonicalKey === "SENSITIVE_MOVEMENT") friendlyTitle = "Di chuyển bất thường";
             else if (a.canonicalKey === "AUTH_FAILURE") friendlyTitle = "Xác thực thất bại";
             else if (a.canonicalKey === "COUNTERFEIT_DETECTED") friendlyTitle = "Phát hiện hàng giả";
+            else if (a.canonicalKey === "SCAN_REJECTED") friendlyTitle = "Cảnh báo Quét lỗi";
+            else if (a.canonicalKey === "SCAN_ACCEPTED") friendlyTitle = "Lượt quét thành công";
+            else if (a.canonicalKey === "LEDGER_SCAN_SUSPICIOUS") friendlyTitle = "CẢNH BÁO: NGHI VẤN HÀNG GIẢ";
+            else if (a.canonicalKey === "LEDGER_SCAN_WARNING") friendlyTitle = "Cảnh báo Quét bất thường";
 
             // Province normalization: Filter out "Unknown" string
             let prov = a.details?.province || actor.province || "Cả nước";
@@ -333,6 +337,8 @@ export class RegulatorAlertsService {
                 issues: r.issues,
                 description: r.description,
                 paymentBill: r.paymentBillMeta,
+                drugImage: r.drugImageMeta,
+                qrImage: r.qrImageMeta,
                 additionalImage: r.additionalImageMeta,
                 reporterIP: r.reporterIP,
                 batchID: r.batchID // Ensure batchID is passed for recall action

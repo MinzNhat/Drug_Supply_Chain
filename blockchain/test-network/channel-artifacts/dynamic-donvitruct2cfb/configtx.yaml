@@ -1,0 +1,21 @@
+Organizations:
+  - &donvitruct2cfb
+    Name: donvitruct2cfbMSP
+    ID: donvitruct2cfbMSP
+    MSPDir: /app/blockchain/test-network/organizations/peerOrganizations/donvitruct2cfb.drugguard.vn/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('donvitruct2cfbMSP.admin', 'donvitruct2cfbMSP.peer', 'donvitruct2cfbMSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('donvitruct2cfbMSP.admin', 'donvitruct2cfbMSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('donvitruct2cfbMSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('donvitruct2cfbMSP.peer')"
+    AnchorPeers:
+        - Host: peer0.donvitruct2cfb.drugguard.vn
+          Port: 20651

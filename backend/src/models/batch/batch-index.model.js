@@ -33,6 +33,8 @@ const batchIndexSchema = new Schema(
         },
         recallStatus: { type: String, index: true, default: "NONE" },
         recallNote: { type: String, default: "" },
+        consumptionConfirmed: { type: Boolean, default: false, index: true },
+        metadata: { type: Schema.Types.Mixed, default: {} },
     },
     { timestamps: true },
 );

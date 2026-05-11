@@ -44,8 +44,9 @@ export const createRegulatorHistoryController = (supplyChainService) => {
         const query = {};
         
         // Regional filter for LOW level regulators
-        if (user.role === "Regulator" && user.regulatorLevel === "LOW") {
-            // They can only see transactions that happened in their province
+        // BYPASS: If searching for a specific batchID, allow seeing all provinces to support full trace mapping
+        if (user.role === "Regulator" && user.regulatorLevel === "LOW" && !req.query.batchID) {
+            // They can only see transactions that happened in their province in the general list
             query.province = user.province;
         }
 

@@ -100,14 +100,21 @@ const parseGeneratePayload = (payload) => {
  * @returns {{ token: string, isAuthentic: boolean, confidenceScore: number, decodedMeta: { dataHash: string, metadataSeries: string, metadataIssued: string, metadataExpiry: string } }}
  */
 const parseVerifyPayload = (payload) => {
-    const body = isRecord(payload) ? payload : {};
-    const decodedMeta = isRecord(body.decodedMeta) ? body.decodedMeta : {};
+    const envelope = isRecord(payload) ? payload : {};
+    const body = isRecord(envelope.data) ? envelope.data : envelope;
+    
+    // Check for required fields with fallback to common naming variations
+    const token = body.token ?? null;
+    const isAuthentic = body.isAuthentic ?? body.is_authentic ?? false;
+    const confidenceScore = body.confidenceScore ?? body.confidence_score ?? 0;
+    const rawDecodedMeta = body.decodedMeta ?? body.decoded_meta ?? null;
+    const decodedMeta = isRecord(rawDecodedMeta) ? rawDecodedMeta : null;
 
     if (
-        typeof body.token !== "string" ||
-        typeof body.isAuthentic !== "boolean" ||
-        typeof body.confidenceScore !== "number" ||
-        !Number.isFinite(body.confidenceScore)
+        (token !== null && typeof token !== "string") ||
+        typeof isAuthentic !== "boolean" ||
+        typeof confidenceScore !== "number" ||
+        !Number.isFinite(confidenceScore)
     ) {
         throw new HttpException(
             502,
@@ -115,32 +122,30 @@ const parseVerifyPayload = (payload) => {
             "Protected QR verify response contract mismatch",
             {
                 expectedFields: ["token", "isAuthentic", "confidenceScore"],
+                received: {
+                    tokenType: typeof token,
+                    isAuthenticType: typeof isAuthentic,
+                    confidenceType: typeof confidenceScore,
+                    raw: body
+                }
             },
         );
     }
 
     return {
-        token: body.token,
-        isAuthentic: body.isAuthentic,
-        confidenceScore: body.confidenceScore,
-        decodedMeta: {
+        token,
+        isAuthentic,
+        confidenceScore,
+        decodedMeta: decodedMeta ? {
             dataHash:
-                typeof decodedMeta.dataHash === "string"
-                    ? decodedMeta.dataHash
-                    : "",
+                (decodedMeta.dataHash ?? decodedMeta.data_hash) || "",
             metadataSeries:
-                typeof decodedMeta.metadataSeries === "string"
-                    ? decodedMeta.metadataSeries
-                    : "",
+                (decodedMeta.metadataSeries ?? decodedMeta.metadata_series) || "",
             metadataIssued:
-                typeof decodedMeta.metadataIssued === "string"
-                    ? decodedMeta.metadataIssued
-                    : "",
+                (decodedMeta.metadataIssued ?? decodedMeta.metadata_issued) || "",
             metadataExpiry:
-                typeof decodedMeta.metadataExpiry === "string"
-                    ? decodedMeta.metadataExpiry
-                    : "",
-        },
+                (decodedMeta.metadataExpiry ?? decodedMeta.metadata_expiry) || "",
+        } : null,
     };
 };
 
@@ -191,19 +196,32 @@ export class QrService {
      * Verify a QR image using the QR service.
      *
      * @param {Buffer} imageBuffer - Image data buffer.
+     * @param {object} options - Optional file metadata.
      * @returns {Promise<{ token: string, isAuthentic: boolean, confidenceScore: number, decodedMeta: object | null }>} Verification result.
      */
-    async verify(imageBuffer) {
+    async verify(imageBuffer, options = {}) {
         const form = new FormData();
+        const filename = options.filename || "scan.png";
+        const contentType = options.mimetype || "image/png";
+
         form.append("image", imageBuffer, {
-            filename: "scan.png",
-            contentType: "image/png",
+            filename,
+            contentType,
         });
 
         try {
             const response = await this.http.post("/api/v1/qr/verify", form, {
-                headers: form.getHeaders(),
+                headers: {
+                    ...form.getHeaders(),
+                    "Accept": "application/json"
+                },
             });
+
+            // [LOG] Debugging QR raw response
+            if (response.status === 200) {
+                console.info(`[DEBUG] QrService.verify: Received 200 from QR Service. TraceId: ${options.traceId || 'N/A'}`);
+                console.info(`[DEBUG] QrService.verify: Raw Response Body: ${JSON.stringify(response.data)}`);
+            }
 
             return parseVerifyPayload(response.data);
         } catch (error) {

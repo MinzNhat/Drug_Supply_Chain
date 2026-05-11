@@ -1,0 +1,12 @@
+{
+  "source_log": "/Users/minznhat/Library/Application Support/Code - Insiders/User/workspaceStorage/dc26b6b69f570683b37d81bb838243f1/chatSessions/4b7403d7-7eb4-43cc-96fa-5cadfa8ea50f.jsonl",
+  "restore_root": "/Users/minznhat/Desktop/DATN/.recovery/chat_frontend_restore",
+  "files_written": [
+    "app/dashboard/authority/complaints/page.tsx",
+    "app/dashboard/authority/surveillance/page.tsx",
+    "components/dashboard/authority/complaints/ComplaintsMap.tsx",
+    "lib/locales/en.ts",
+    "lib/locales/vi.ts"
+  ],
+  "count": 5
+}

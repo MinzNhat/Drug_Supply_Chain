@@ -17,6 +17,14 @@ const reportSchema = new mongoose.Schema(
             fileName: String,
             size: Number,
         },
+        qrImageMeta: {
+            fileName: String,
+            size: Number,
+        },
+        drugImageMeta: {
+            fileName: String,
+            size: Number,
+        },
         additionalImageMeta: {
             fileName: String,
             size: Number,

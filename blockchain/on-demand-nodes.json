@@ -1,1 +1,83 @@
-[]
+[
+  {
+    "id": "peer0.giaohangnh2de5.drugguard.vn",
+    "label": "Peer: giaohangnh2de5",
+    "type": "peer",
+    "org": "giaohangnh2de5",
+    "mspId": "giaohangnh2de5MSP",
+    "host": "peer0.giaohangnh2de5.drugguard.vn",
+    "port": 19851
+  },
+  {
+    "id": "peer0.giaohangnh2dde.drugguard.vn",
+    "label": "Peer: giaohangnh2dde",
+    "type": "peer",
+    "org": "giaohangnh2dde",
+    "mspId": "giaohangnh2ddeMSP",
+    "host": "peer0.giaohangnh2dde.drugguard.vn",
+    "port": 19951
+  },
+  {
+    "id": "peer0.nsxdrugtec2dc3.drugguard.vn",
+    "label": "Peer: nsxdrugtec2dc3",
+    "type": "peer",
+    "org": "nsxdrugtec2dc3",
+    "mspId": "nsxdrugtec2dc3MSP",
+    "host": "peer0.nsxdrugtec2dc3.drugguard.vn",
+    "port": 20051
+  },
+  {
+    "id": "peer0.giaohangnh2dd7.drugguard.vn",
+    "label": "Peer: giaohangnh2dd7",
+    "type": "peer",
+    "org": "giaohangnh2dd7",
+    "mspId": "giaohangnh2dd7MSP",
+    "host": "peer0.giaohangnh2dd7.drugguard.vn",
+    "port": 20151
+  },
+  {
+    "id": "peer0.donvitruct2db5.drugguard.vn",
+    "label": "Peer: donvitruct2db5",
+    "type": "peer",
+    "org": "donvitruct2db5",
+    "mspId": "donvitruct2db5MSP",
+    "host": "peer0.donvitruct2db5.drugguard.vn",
+    "port": 20251
+  },
+  {
+    "id": "peer0.nsxdrugtec2dbc.drugguard.vn",
+    "label": "Peer: nsxdrugtec2dbc",
+    "type": "peer",
+    "org": "nsxdrugtec2dbc",
+    "mspId": "nsxdrugtec2dbcMSP",
+    "host": "peer0.nsxdrugtec2dbc.drugguard.vn",
+    "port": 20351
+  },
+  {
+    "id": "peer0.donvitruct2dab.drugguard.vn",
+    "label": "Peer: donvitruct2dab",
+    "type": "peer",
+    "org": "donvitruct2dab",
+    "mspId": "donvitruct2dabMSP",
+    "host": "peer0.donvitruct2dab.drugguard.vn",
+    "port": 20451
+  },
+  {
+    "id": "peer0.donvitruct2d84.drugguard.vn",
+    "label": "Peer: donvitruct2d84",
+    "type": "peer",
+    "org": "donvitruct2d84",
+    "mspId": "donvitruct2d84MSP",
+    "host": "peer0.donvitruct2d84.drugguard.vn",
+    "port": 20551
+  },
+  {
+    "id": "peer0.donvitruct2cfb.drugguard.vn",
+    "label": "Peer: donvitruct2cfb",
+    "type": "peer",
+    "org": "donvitruct2cfb",
+    "mspId": "donvitruct2cfbMSP",
+    "host": "peer0.donvitruct2cfb.drugguard.vn",
+    "port": 20651
+  }
+]

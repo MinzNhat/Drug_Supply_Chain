@@ -40,8 +40,9 @@ class DrugTrackerContract extends Contract {
     /**
      * Register one scan verification attempt and update risk status.
      */
-    async VerifyBatch(ctx, batchID) {
-        return batchService.verifyBatch(ctx, batchID);
+    async VerifyBatch(ctx, batchID, isInternal) {
+        const internal = String(isInternal) === "true";
+        return batchService.verifyBatch(ctx, batchID, internal);
     }
 
     /**

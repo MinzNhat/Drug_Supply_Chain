@@ -1,0 +1,11 @@
+PeerOrgs:
+  - Name: donvitruct2db5
+    Domain: donvitruct2db5.drugguard.vn
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+      SANS:
+        - localhost
+        - peer0.donvitruct2db5.drugguard.vn
+    Users:
+      Count: 1

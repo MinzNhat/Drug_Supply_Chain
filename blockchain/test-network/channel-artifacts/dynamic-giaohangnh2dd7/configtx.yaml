@@ -1,0 +1,21 @@
+Organizations:
+  - &giaohangnh2dd7
+    Name: giaohangnh2dd7MSP
+    ID: giaohangnh2dd7MSP
+    MSPDir: /app/blockchain/test-network/organizations/peerOrganizations/giaohangnh2dd7.drugguard.vn/msp
+    Policies:
+        Readers:
+            Type: Signature
+            Rule: "OR('giaohangnh2dd7MSP.admin', 'giaohangnh2dd7MSP.peer', 'giaohangnh2dd7MSP.client')"
+        Writers:
+            Type: Signature
+            Rule: "OR('giaohangnh2dd7MSP.admin', 'giaohangnh2dd7MSP.client')"
+        Admins:
+            Type: Signature
+            Rule: "OR('giaohangnh2dd7MSP.admin')"
+        Endorsement:
+            Type: Signature
+            Rule: "OR('giaohangnh2dd7MSP.peer')"
+    AnchorPeers:
+        - Host: peer0.giaohangnh2dd7.drugguard.vn
+          Port: 20151

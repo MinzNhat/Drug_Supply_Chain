@@ -160,9 +160,11 @@ async function readBatch(ctx, batchID) {
  *
  * @param {Context} ctx - Fabric transaction context.
  * @param {string} batchID - Batch identifier.
+ * @param {boolean} isInternal - Whether the scan is from an internal organization (non-billing).
  * @returns {string} JSON-serialized updated batch with verificationResult.
  */
-async function verifyBatch(ctx, batchID) {
+async function verifyBatch(ctx, batchID, isInternal) {
+    const internalFlag = String(isInternal) === "true";
     const batch = await getBatchOrThrow(ctx, batchID);
 
     if (batch.status === "RECALLED") {
@@ -179,54 +181,59 @@ async function verifyBatch(ctx, batchID) {
         });
     }
 
-    if (!batch.consumptionConfirmed) {
+    // 1. Alert Regulator if an external/public scan occurs before consumption is confirmed
+    if (!internalFlag && !batch.consumptionConfirmed) {
         await ctx.stub.setEvent(
             "GovMonitor",
             Buffer.from(
                 JSON.stringify({
                     batchID,
-                    msg: "Scan before consumption delivery confirmation (warning)",
+                    msg: "External scan attempt before consumption delivery confirmation (suspicious)",
                     code: "WARN_UNCONFIRMED_CONSUMPTION",
                 }),
             ),
         );
     }
 
-    batch.scanCount += 1;
+    // 2. Only increment scan count and trigger thresholds for external/public scans 
+    // AND only AFTER consumption has been officially confirmed by the distributor
+    if (!internalFlag && batch.consumptionConfirmed) {
+        batch.scanCount += 1;
 
-    if (batch.scanCount >= batch.suspiciousThreshold) {
-        if (batch.status !== "SUSPICIOUS") {
-            batch.status = "SUSPICIOUS";
-            await ctx.stub.setEvent(
-                "PublicAlert",
-                Buffer.from(
-                    JSON.stringify({
-                        batchID,
-                        msg: "Suspicious scan volume detected",
-                        scanCount: batch.scanCount,
-                        suspiciousThreshold: batch.suspiciousThreshold,
-                    }),
-                ),
-            );
+        if (batch.scanCount >= batch.suspiciousThreshold) {
+            if (batch.status !== "SUSPICIOUS") {
+                batch.status = "SUSPICIOUS";
+                await ctx.stub.setEvent(
+                    "PublicAlert",
+                    Buffer.from(
+                        JSON.stringify({
+                            batchID,
+                            msg: "Suspicious scan volume detected",
+                            scanCount: batch.scanCount,
+                            suspiciousThreshold: batch.suspiciousThreshold,
+                        }),
+                    ),
+                );
+            }
+        } else if (batch.scanCount >= batch.warningThreshold) {
+            if (batch.status === "ACTIVE") {
+                batch.status = "WARNING";
+                await ctx.stub.setEvent(
+                    "GovMonitor",
+                    Buffer.from(
+                        JSON.stringify({
+                            batchID,
+                            msg: "Scan anomaly threshold reached",
+                            scanCount: batch.scanCount,
+                            warningThreshold: batch.warningThreshold,
+                        }),
+                    ),
+                );
+            }
         }
-    } else if (batch.scanCount >= batch.warningThreshold) {
-        if (batch.status === "ACTIVE") {
-            batch.status = "WARNING";
-            await ctx.stub.setEvent(
-                "GovMonitor",
-                Buffer.from(
-                    JSON.stringify({
-                        batchID,
-                        msg: "Scan anomaly threshold reached",
-                        scanCount: batch.scanCount,
-                        warningThreshold: batch.warningThreshold,
-                    }),
-                ),
-            );
-        }
+        await putBatch(ctx, batchID, batch);
     }
 
-    await putBatch(ctx, batchID, batch);
     return JSON.stringify({
         ...batch,
         verificationResult: evaluateRisk(batch),

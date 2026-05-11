@@ -21,13 +21,15 @@ export const createBatchSchema = z.object({
         .refine((value) => new Date(value).getTime() > Date.now(), {
             message: "expiryDate must be in the future",
         }),
+    metadata: z.record(z.unknown()).optional(),
 });
 
 /**
  * Request schema for shipping a batch.
  */
 export const shipBatchSchema = z.object({
-    targetOwnerMSP: z.string().min(1),
+    targetOwnerMSP: z.string().optional(),
+    targetOwnerId: z.string().optional(),
     targetDistributorUnitId: z.string().optional(),
 });
 
